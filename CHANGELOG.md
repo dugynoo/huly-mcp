@@ -1,5 +1,11 @@
 # @firfi/huly-mcp
 
+## 0.10.1
+
+### Patch Changes
+
+- Harden direct-message operations by enforcing authenticated-account membership, resolving participant names only for one-to-one DMs, mapping DM lookup errors to invalid params, and resolving DM message senders through social identities.
+
 ## 0.10.0
 
 ### Minor Changes
