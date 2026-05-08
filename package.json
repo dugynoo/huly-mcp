@@ -35,6 +35,7 @@
     "circular": "madge --extensions ts --circular src",
     "local-release": "changeset version && pnpm build && pnpm verify-version && changeset publish",
     "verify-version": "node -e \"const v=require('./package.json').version; const d=require('fs').readFileSync('dist/index.cjs','utf8'); if(!d.includes('\\\"'+v+'\\\"'))throw new Error('dist version mismatch: expected '+v)\"",
+    "prepack": "pnpm build && pnpm verify-version",
     "prepublishOnly": "pnpm check-all && pnpm verify-version",
     "update-readme": "tsx scripts/update-readme-tools.ts"
   },
