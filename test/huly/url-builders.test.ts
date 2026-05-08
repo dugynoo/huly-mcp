@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { DocumentId, UrlString, WorkspaceUrlSlug } from "../../src/domain/schemas/shared.js"
-import { buildDocumentUrl, slugifyTitle } from "../../src/huly/url-builders.js"
+import { DocumentId, OrganizationId, PersonId, UrlString, WorkspaceUrlSlug } from "../../src/domain/schemas/shared.js"
+import { buildContactUrl, buildDocumentUrl, slugifyTitle } from "../../src/huly/url-builders.js"
 
 describe("slugifyTitle", () => {
   it("reproduces the known Huly slug for a real document title", () => {
@@ -67,5 +67,29 @@ describe("buildDocumentUrl", () => {
   it("falls back to bare id when slug is empty", () => {
     expect(buildDocumentUrl(baseUrl, workspaceUrlSlug, "!!!", id))
       .toBe(`${baseUrl}/workbench/${workspaceUrlSlug}/document/${id}`)
+  })
+})
+
+describe("buildContactUrl", () => {
+  const baseUrl = UrlString.make("https://huly.axzez.org")
+  const workspaceUrlSlug = WorkspaceUrlSlug.make("axzez-6925fc59-8ee2eba17e-eb022e")
+  const orgId = OrganizationId.make("67d1da54dc299ae8fb101924")
+  const personId = PersonId.make("69dac6c47ace7e65e7aaca9e")
+
+  it("composes a workbench contact URL for an organization", () => {
+    expect(buildContactUrl(baseUrl, workspaceUrlSlug, orgId)).toBe(
+      "https://huly.axzez.org/workbench/axzez-6925fc59-8ee2eba17e-eb022e/contact/67d1da54dc299ae8fb101924"
+    )
+  })
+
+  it("composes a workbench contact URL for a person", () => {
+    expect(buildContactUrl(baseUrl, workspaceUrlSlug, personId)).toBe(
+      "https://huly.axzez.org/workbench/axzez-6925fc59-8ee2eba17e-eb022e/contact/69dac6c47ace7e65e7aaca9e"
+    )
+  })
+
+  it("tolerates trailing slash on baseUrl", () => {
+    expect(buildContactUrl(UrlString.make(`${baseUrl}/`), workspaceUrlSlug, orgId))
+      .toBe(`${baseUrl}/workbench/${workspaceUrlSlug}/contact/${orgId}`)
   })
 })

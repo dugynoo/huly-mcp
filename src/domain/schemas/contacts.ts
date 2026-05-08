@@ -1,6 +1,6 @@
 import { JSONSchema, Schema } from "effect"
 
-import type { ContactProvider, OrganizationId, PersonName } from "./shared.js"
+import type { ContactProvider, OrganizationId, PersonName, UrlString } from "./shared.js"
 import { Email, LimitParam, MemberReference, NonEmptyString, PersonId } from "./shared.js"
 
 // No codec needed — internal type, not used for runtime validation
@@ -9,6 +9,7 @@ export interface PersonSummary {
   readonly name: PersonName
   readonly city?: string | undefined
   readonly email?: Email | undefined
+  readonly url: UrlString
   readonly modifiedOn?: number | undefined
 }
 
@@ -26,6 +27,7 @@ export interface Person {
   readonly email?: Email | undefined
   readonly channels?: ReadonlyArray<{ readonly provider: ContactProvider; readonly value: string }> | undefined
   readonly organizations?: ReadonlyArray<OrganizationMembershipSummary> | undefined
+  readonly url: UrlString
   readonly modifiedOn?: number | undefined
   readonly createdOn?: number | undefined
 }
@@ -36,6 +38,7 @@ export interface EmployeeSummary {
   readonly email?: Email | undefined
   readonly position?: string | undefined
   readonly active: boolean
+  readonly url: UrlString
   readonly modifiedOn?: number | undefined
 }
 
@@ -44,6 +47,7 @@ export interface OrganizationSummary {
   readonly name: string
   readonly city?: string | undefined
   readonly members: number
+  readonly url: UrlString
   readonly modifiedOn?: number | undefined
 }
 
@@ -389,6 +393,7 @@ export interface GetOrganizationResult {
   readonly city?: string | undefined
   readonly description?: string | undefined
   readonly members: number
+  readonly url: UrlString
   readonly modifiedOn?: number | undefined
 }
 

@@ -39,6 +39,7 @@ import {
 } from "../errors.js"
 import { contact } from "../huly-plugins.js"
 import { leadClassIds } from "../lead-plugin.js"
+import { buildContactUrlFromConfig } from "../url-builders.js"
 import { batchGetEmailsForPersons, findPersonByEmail, findPersonById } from "./contacts-shared.js"
 import { clampLimit } from "./query-helpers.js"
 import { toRef } from "./sdk-boundary.js"
@@ -152,13 +153,17 @@ export const listOrganizations = (
       }
     )
 
-    return orgs.map(org => ({
-      id: OrganizationId.make(org._id),
-      name: org.name,
-      city: org.city,
-      members: org.members,
-      modifiedOn: org.modifiedOn
-    }))
+    return orgs.map(org => {
+      const id = OrganizationId.make(org._id)
+      return {
+        id,
+        name: org.name,
+        city: org.city,
+        members: org.members,
+        url: buildContactUrlFromConfig(client.documentUrlConfig, id),
+        modifiedOn: org.modifiedOn
+      }
+    })
   })
 
 export const createOrganization = (
@@ -225,12 +230,14 @@ export const getOrganization = (
       : undefined
     /* eslint-enable no-restricted-syntax */
 
+    const id = OrganizationId.make(org._id)
     return {
-      id: OrganizationId.make(org._id),
+      id,
       name: org.name,
       city: org.city || undefined,
       description: descriptionText,
       members: org.members,
+      url: buildContactUrlFromConfig(client.documentUrlConfig, id),
       modifiedOn: org.modifiedOn
     }
   })

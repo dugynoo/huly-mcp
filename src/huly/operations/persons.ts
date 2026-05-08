@@ -39,6 +39,7 @@ import { ContactProvider, Email, OrganizationId, PersonId, PersonName } from "..
 import { HulyClient, type HulyClientError } from "../client.js"
 import { PersonNotFoundError } from "../errors.js"
 import { contact } from "../huly-plugins.js"
+import { buildContactUrlFromConfig } from "../url-builders.js"
 import { batchGetEmailsForPersons, findPersonByEmail, findPersonById } from "./contacts-shared.js"
 import { clampLimit, escapeLikeWildcards } from "./query-helpers.js"
 import { toRef } from "./sdk-boundary.js"
@@ -142,11 +143,13 @@ export const listPersons = (
 
     return persons.map(person => {
       const emailValue = emailMap.get(person._id)
+      const id = PersonId.make(person._id)
       return {
-        id: PersonId.make(person._id),
+        id,
         name: PersonName.make(person.name),
         city: person.city,
         email: emailValue !== undefined ? Email.make(emailValue) : undefined,
+        url: buildContactUrlFromConfig(client.documentUrlConfig, id),
         modifiedOn: person.modifiedOn
       }
     })
@@ -179,9 +182,10 @@ export const getPerson = (
 
     const { firstName, lastName } = parseName(person.name)
     const emailChannel = channels.find(c => c.provider === contact.channelProvider.Email)
+    const id = PersonId.make(person._id)
 
     return {
-      id: PersonId.make(person._id),
+      id,
       name: PersonName.make(person.name),
       firstName,
       lastName,
@@ -192,6 +196,7 @@ export const getPerson = (
         value: c.value
       })),
       organizations: organizations.length > 0 ? organizations : undefined,
+      url: buildContactUrlFromConfig(client.documentUrlConfig, id),
       modifiedOn: person.modifiedOn,
       createdOn: person.createdOn
     }
@@ -314,12 +319,14 @@ export const listEmployees = (
 
     return employees.map(emp => {
       const emailValue = emailMap.get(emp._id)
+      const id = PersonId.make(emp._id)
       return {
-        id: PersonId.make(emp._id),
+        id,
         name: PersonName.make(emp.name),
         email: emailValue !== undefined ? Email.make(emailValue) : undefined,
         position: emp.position ?? undefined,
         active: emp.active,
+        url: buildContactUrlFromConfig(client.documentUrlConfig, id),
         modifiedOn: emp.modifiedOn
       }
     })
