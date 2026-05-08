@@ -294,7 +294,7 @@ describe("listDirectMessageMessages", () => {
         _id: "msg-1" as Ref<ChatMessage>,
         space: "dm-1" as Ref<Space>,
         message: "hi",
-        // eslint-disable-next-line no-restricted-syntax -- AccountUuid → PersonId at the test boundary; both are branded strings, runtime safe
+        // eslint-disable-next-line no-restricted-syntax -- brands erased at runtime; AccountUuid and PersonId are both `string` here, so the cast is safe at this test boundary
         modifiedBy: accountUuid as unknown as PersonId
       })
       const employee = makeEmployee({
