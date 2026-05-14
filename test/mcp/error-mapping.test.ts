@@ -20,6 +20,7 @@ import {
   LeadNotFoundError,
   OrganizationIdentifierAmbiguousError,
   OrganizationNotFoundError,
+  PersonIdentifierAmbiguousError,
   PersonNotFoundError,
   ProjectNotFoundError
 } from "../../src/huly/errors.js"
@@ -90,6 +91,21 @@ describe("Error Mapping to MCP", () => {
           expect(response._meta.errorCode).toBe(McpErrorCode.InvalidParams)
           expect(response.content[0].text).toBe(
             "Person 'john@example.com' not found"
+          )
+        }))
+
+      it.effect("maps PersonIdentifierAmbiguousError with descriptive message", () =>
+        Effect.gen(function*() {
+          const error = new PersonIdentifierAmbiguousError({
+            identifier: "Smith,Bill",
+            matches: 2
+          })
+          const response = mapDomainErrorToMcp(error)
+
+          expect(response.isError).toBe(true)
+          expect(response._meta.errorCode).toBe(McpErrorCode.InvalidParams)
+          expect(response.content[0].text).toBe(
+            "Person identifier 'Smith,Bill' matched 2 people; use an exact email address instead"
           )
         }))
 

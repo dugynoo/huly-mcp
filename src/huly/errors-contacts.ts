@@ -5,6 +5,8 @@
  */
 import { Schema } from "effect"
 
+const MIN_AMBIGUOUS_PERSON_MATCHES = 2
+
 /**
  * Person (assignee) not found.
  */
@@ -16,6 +18,21 @@ export class PersonNotFoundError extends Schema.TaggedError<PersonNotFoundError>
 ) {
   override get message(): string {
     return `Person '${this.identifier}' not found`
+  }
+}
+
+/**
+ * Person identifier matched multiple people.
+ */
+export class PersonIdentifierAmbiguousError extends Schema.TaggedError<PersonIdentifierAmbiguousError>()(
+  "PersonIdentifierAmbiguousError",
+  {
+    identifier: Schema.String,
+    matches: Schema.Number.pipe(Schema.int(), Schema.greaterThanOrEqualTo(MIN_AMBIGUOUS_PERSON_MATCHES))
+  }
+) {
+  override get message(): string {
+    return `Person identifier '${this.identifier}' matched ${this.matches} people; use an exact email address instead`
   }
 }
 

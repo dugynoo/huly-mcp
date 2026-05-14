@@ -41,6 +41,7 @@ import {
   NotificationNotFoundError,
   OrganizationIdentifierAmbiguousError,
   OrganizationNotFoundError,
+  PersonIdentifierAmbiguousError,
   PersonNotAnEmployeeError,
   PersonNotFoundError,
   ProjectNotFoundError,
@@ -298,6 +299,24 @@ describe("Huly Errors", () => {
       Effect.gen(function*() {
         const error = new DirectMessageIdentifierAmbiguousError({ identifier: "Kerr,Shannon", matches: 2 })
         expect(error.message).toBe("Direct message 'Kerr,Shannon' is ambiguous (2 matches); use the DM _id")
+      }))
+  })
+
+  describe("PersonIdentifierAmbiguousError", () => {
+    it.effect("creates with identifier and match count", () =>
+      Effect.gen(function*() {
+        const error = new PersonIdentifierAmbiguousError({ identifier: "Smith,Bill", matches: 2 })
+        expect(error._tag).toBe("PersonIdentifierAmbiguousError")
+        expect(error.identifier).toBe("Smith,Bill")
+        expect(error.matches).toBe(2)
+      }))
+
+    it.effect("generates message from fields", () =>
+      Effect.gen(function*() {
+        const error = new PersonIdentifierAmbiguousError({ identifier: "Smith,Bill", matches: 2 })
+        expect(error.message).toBe(
+          "Person identifier 'Smith,Bill' matched 2 people; use an exact email address instead"
+        )
       }))
   })
 
@@ -638,6 +657,8 @@ describe("Huly Errors", () => {
               return `status:${error.status}`
             case "PersonNotFoundError":
               return `person:${error.identifier}`
+            case "PersonIdentifierAmbiguousError":
+              return `person-ambiguous:${error.identifier}:${error.matches}`
             case "OrganizationNotFoundError":
               return `organization:${error.identifier}`
             case "OrganizationIdentifierAmbiguousError":
@@ -759,6 +780,9 @@ describe("Huly Errors", () => {
         expect(matchError(new ProjectNotFoundError({ identifier: "Z" }))).toBe("project:Z")
         expect(matchError(new InvalidStatusError({ status: "bad", project: "P" }))).toBe("status:bad")
         expect(matchError(new PersonNotFoundError({ identifier: "john@example.com" }))).toBe("person:john@example.com")
+        expect(matchError(new PersonIdentifierAmbiguousError({ identifier: "Smith,Bill", matches: 2 }))).toBe(
+          "person-ambiguous:Smith,Bill:2"
+        )
         expect(matchError(new OrganizationNotFoundError({ identifier: "Acme" }))).toBe("organization:Acme")
         expect(
           matchError(new OrganizationIdentifierAmbiguousError({ identifier: "Acme", matches: 2 }))

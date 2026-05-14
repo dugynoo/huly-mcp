@@ -4,7 +4,7 @@
  * Split into domain modules:
  * - errors-base: HulyError, HulyConnectionError, HulyAuthError
  * - errors-tracker: issue, project, status, milestone, component, template errors
- * - errors-contacts: PersonNotFoundError, OrganizationNotFoundError, InvalidContactProviderError, InvalidPersonUuidError
+ * - errors-contacts: person, organization, and contact validation errors
  * - errors-files: file upload/fetch/size errors, BYTES_PER_MB
  * - errors-documents: teamspace, document errors
  * - errors-messaging: channel, message, thread, reaction errors
@@ -26,6 +26,7 @@ import {
   InvalidPersonUuidError,
   OrganizationIdentifierAmbiguousError,
   OrganizationNotFoundError,
+  PersonIdentifierAmbiguousError,
   PersonNotFoundError
 } from "./errors-contacts.js"
 import { CustomFieldNotFoundError, CustomFieldObjectNotFoundError } from "./errors-custom-fields.js"
@@ -124,6 +125,7 @@ export {
   NotificationNotFoundError,
   OrganizationIdentifierAmbiguousError,
   OrganizationNotFoundError,
+  PersonIdentifierAmbiguousError,
   PersonNotAnEmployeeError,
   PersonNotFoundError,
   ProjectNotFoundError,
@@ -154,6 +156,7 @@ export type HulyDomainError =
   | IssueNotFoundError
   | ProjectNotFoundError
   | InvalidStatusError
+  | PersonIdentifierAmbiguousError
   | PersonNotFoundError
   | OrganizationNotFoundError
   | OrganizationIdentifierAmbiguousError
@@ -219,6 +222,7 @@ export const HulyDomainError: Schema.Union<
     typeof IssueNotFoundError,
     typeof ProjectNotFoundError,
     typeof InvalidStatusError,
+    typeof PersonIdentifierAmbiguousError,
     typeof PersonNotFoundError,
     typeof OrganizationNotFoundError,
     typeof OrganizationIdentifierAmbiguousError,
@@ -280,6 +284,7 @@ export const HulyDomainError: Schema.Union<
   IssueNotFoundError,
   ProjectNotFoundError,
   InvalidStatusError,
+  PersonIdentifierAmbiguousError,
   PersonNotFoundError,
   OrganizationNotFoundError,
   OrganizationIdentifierAmbiguousError,

@@ -37,8 +37,15 @@ import type {
   UpdateDmMessageParams,
   UpdateDmMessageResult
 } from "../../domain/schemas/direct-messages.js"
-import { ChannelId, type DirectMessageIdentifier, MessageId, PersonName } from "../../domain/schemas/shared.js"
+import {
+  ChannelId,
+  type DirectMessageIdentifier,
+  MessageId,
+  PersonName,
+  type PersonRefInput
+} from "../../domain/schemas/shared.js"
 import { HulyClient, type HulyClientError } from "../client.js"
+import type { PersonIdentifierAmbiguousError } from "../errors.js"
 import {
   CannotDirectMessageSelfError,
   DirectMessageIdentifierAmbiguousError,
@@ -48,7 +55,7 @@ import {
   PersonNotFoundError
 } from "../errors.js"
 import { buildSocialIdToPersonNameMap } from "./channels.js"
-import { findPersonByEmailOrName } from "./contacts-shared.js"
+import { findPersonByExactEmailOrName } from "./contacts-shared.js"
 import { markdownToMarkupString, markupToMarkdownString } from "./markup.js"
 import { clampLimit } from "./query-helpers.js"
 import { toRef } from "./sdk-boundary.js"
@@ -74,13 +81,21 @@ type DeleteDmMessageError = UpdateDmMessageError
 
 type CreateDirectMessageError =
   | HulyClientError
+  | PersonIdentifierAmbiguousError
   | PersonNotFoundError
   | PersonNotAnEmployeeError
   | CannotDirectMessageSelfError
 
 // --- Helpers ---
 
-const ONE_TO_ONE_DM_MEMBER_COUNT = 2
+const sortedMemberPair = (first: HulyAccountUuid, second: HulyAccountUuid): Array<HulyAccountUuid> =>
+  [first, second].sort()
+
+const hasExactMembers = (dm: HulyDirectMessage, sortedMembers: ReadonlyArray<HulyAccountUuid>): boolean => {
+  const dmMembers = [...dm.members].sort()
+  return dmMembers.length === sortedMembers.length
+    && sortedMembers.every((member, index) => dmMembers[index] === member)
+}
 
 /**
  * Resolve a `dm` identifier to a Huly DirectMessage document.
@@ -138,11 +153,8 @@ export const findDirectMessage = (
       { members: accountUuid }
     )
 
-    const matches = directMessages.filter((dm) =>
-      dm.members.length === ONE_TO_ONE_DM_MEMBER_COUNT
-      && dm.members.includes(accountUuid)
-      && accountUuids.some((candidate) => dm.members.includes(candidate))
-    )
+    const memberPairs = accountUuids.map((candidate) => sortedMemberPair(accountUuid, candidate))
+    const matches = directMessages.filter((dm) => memberPairs.some((members) => hasExactMembers(dm, members)))
 
     if (matches.length === 0) {
       return yield* new DirectMessageNotFoundError({ identifier })
@@ -315,16 +327,16 @@ export const deleteDirectMessage = (
  * `personUuid` and cannot be DM'd.
  */
 const resolveEmployeeAccount = (
-  identifier: string
+  identifier: PersonRefInput
 ): Effect.Effect<
   HulyAccountUuid,
-  HulyClientError | PersonNotFoundError | PersonNotAnEmployeeError,
+  HulyClientError | PersonIdentifierAmbiguousError | PersonNotFoundError | PersonNotAnEmployeeError,
   HulyClient
 > =>
   Effect.gen(function*() {
     const client = yield* HulyClient
 
-    const person = yield* findPersonByEmailOrName(client, identifier)
+    const person = yield* findPersonByExactEmailOrName(client, identifier)
     if (person === undefined) {
       return yield* new PersonNotFoundError({ identifier })
     }
@@ -369,10 +381,8 @@ export const createDirectMessage = (
       { members: me }
     )
 
-    const existing = existingDms.find((dm) =>
-      dm.members.length === ONE_TO_ONE_DM_MEMBER_COUNT
-      && dm.members.includes(other)
-    )
+    const members = sortedMemberPair(me, other)
+    const existing = existingDms.find((dm) => hasExactMembers(dm, members))
 
     if (existing !== undefined) {
       return { id: ChannelId.make(existing._id), created: false }
@@ -384,7 +394,7 @@ export const createDirectMessage = (
       description: "",
       private: true,
       archived: false,
-      members: [me, other].sort()
+      members
     }
 
     yield* client.createDoc(
