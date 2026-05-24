@@ -1,7 +1,7 @@
 {
   "name": "@dugynoo/huly-mcp",
   "version": "0.13.0",
-  "description": "MCP server for Huly integration with task type support and Process plugin tools. Fork of @firfi/huly-mcp.",
+  "description": "Complete MCP server for Huly project management with 209 tools across 23 categories. Supports custom task types, project-scoped status workflows, and read-side Process plugin tools.",
   "mcpName": "io.github.dugynoo/huly-mcp",
   "type": "module",
   "main": "./dist/index.cjs",

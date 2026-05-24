@@ -7,14 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![MCP Server](https://badge.mcpx.dev?type=server&features=tools)](https://github.com/dugynoo/huly-mcp)
 
-MCP server for [Huly](https://huly.io/) integration.
-
-> **Fork notice.** This package is a fork of [`@firfi/huly-mcp`](https://github.com/dearlordylord/huly-mcp) maintained by **dugynoo / Effistream**. Compared to upstream it adds:
->
-> - `taskType` parameter on `create_issue` / `update_issue` so issues can be created with custom task types (e.g. `Ticket`) and project-scoped statuses (status names like `Created`, `Awaiting approval`).
-> - **Process plugin** read-side tools: `list_processes`, `get_process`, `list_executions` (requires a Huly server with the Process plugin enabled, v0.7.382+).
->
-> Credits to the upstream authors and contributors — see `LICENSE`.
+MCP server for [Huly](https://huly.io/) integration — 209 tools across 23 categories (issues, projects, tasks, comments, documents, cards, channels, calendar, time tracking, test management, processes, custom fields, attachments, leads and more). Supports custom task types with project-scoped status workflows and read-side Process plugin tools.
 
 ## Installation
 
@@ -169,6 +162,15 @@ MCP_TRANSPORT=http MCP_HTTP_PORT=8080 MCP_HTTP_HOST=0.0.0.0 npx -y @dugynoo/huly
 | `TOOLSETS` | No | Comma-separated tool categories to expose. If unset, all tools are exposed. Example: `issues,projects,search` |
 
 *Auth: Provide either `HULY_EMAIL` + `HULY_PASSWORD` or `HULY_TOKEN`.
+
+## Differences from `@firfi/huly-mcp`
+
+This package is a downstream of [`@firfi/huly-mcp`](https://github.com/dearlordylord/huly-mcp) with two additions:
+
+- **`taskType` parameter on `create_issue` and `update_issue`** so issues can be created with custom task types (e.g. `Ticket`, `Bug`, `Feature`) and project-scoped status workflows (`Created`, `Awaiting approval`, etc.). Without this, issues created via MCP fall back to the default task type even when the project defines its own.
+- **Read-side Process plugin tools**: `list_processes`, `get_process`, `list_executions`. Requires a Huly server with the Process plugin enabled (v0.7.382+).
+
+Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 
 <!-- tools:start -->
 <!-- AUTO-GENERATED from src/mcp/tools/ descriptions. Do not edit manually. Run `pnpm update-readme` to regenerate. -->
