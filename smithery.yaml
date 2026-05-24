@@ -1,0 +1,52 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema describing the configuration this MCP server expects.
+    type: object
+    required:
+      - hulyUrl
+      - hulyWorkspace
+    properties:
+      hulyUrl:
+        type: string
+        description: Huly instance URL (e.g. https://huly.app or your self-hosted URL).
+      hulyWorkspace:
+        type: string
+        description: Huly workspace identifier.
+      hulyEmail:
+        type: string
+        description: Huly account email (required if hulyToken is not set).
+      hulyPassword:
+        type: string
+        description: Huly account password (required if hulyToken is not set).
+      hulyToken:
+        type: string
+        description: Huly API token. Use this instead of email + password where possible.
+      hulyConnectionTimeout:
+        type: integer
+        description: Connection timeout in milliseconds (default 30000).
+        default: 30000
+      toolsets:
+        type: string
+        description: Comma-separated list of tool categories to expose. Leave empty to expose all tools. Example "issues,projects,search".
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', '@dugynoo/huly-mcp@latest'],
+      env: {
+        HULY_URL: config.hulyUrl,
+        HULY_WORKSPACE: config.hulyWorkspace,
+        ...(config.hulyEmail ? { HULY_EMAIL: config.hulyEmail } : {}),
+        ...(config.hulyPassword ? { HULY_PASSWORD: config.hulyPassword } : {}),
+        ...(config.hulyToken ? { HULY_TOKEN: config.hulyToken } : {}),
+        ...(config.hulyConnectionTimeout ? { HULY_CONNECTION_TIMEOUT: String(config.hulyConnectionTimeout) } : {}),
+        ...(config.toolsets ? { TOOLSETS: config.toolsets } : {})
+      }
+    })
+  exampleConfig:
+    hulyUrl: https://huly.app
+    hulyWorkspace: my-workspace
+    hulyEmail: me@example.com
+    hulyPassword: hunter2
