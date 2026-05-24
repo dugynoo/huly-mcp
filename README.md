@@ -1,13 +1,20 @@
-# @firfi/huly-mcp
+# @dugynoo/huly-mcp
 
-[![npm](https://img.shields.io/npm/v/@firfi/huly-mcp)](https://www.npmjs.com/package/@firfi/huly-mcp)
-[![npm downloads](https://img.shields.io/npm/dm/@firfi/huly-mcp)](https://www.npmjs.com/package/@firfi/huly-mcp)
+[![npm](https://img.shields.io/npm/v/@dugynoo/huly-mcp)](https://www.npmjs.com/package/@dugynoo/huly-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/@dugynoo/huly-mcp)](https://www.npmjs.com/package/@dugynoo/huly-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blue)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
-[![MCP Server](https://badge.mcpx.dev?type=server&features=tools)](https://github.com/dearlordylord/huly-mcp)[![cooked at Monadical](https://img.shields.io/endpoint?url=https://monadical.com/static/api/cooked-at-monadical.json)](https://monadical.com)
+[![MCP Server](https://badge.mcpx.dev?type=server&features=tools)](https://github.com/dugynoo/huly-mcp)
 
 MCP server for [Huly](https://huly.io/) integration.
+
+> **Fork notice.** This package is a fork of [`@firfi/huly-mcp`](https://github.com/dearlordylord/huly-mcp) maintained by **dugynoo / Effistream**. Compared to upstream it adds:
+>
+> - `taskType` parameter on `create_issue` / `update_issue` so issues can be created with custom task types (e.g. `Ticket`) and project-scoped statuses (status names like `Created`, `Awaiting approval`).
+> - **Process plugin** read-side tools: `list_processes`, `get_process`, `list_executions` (requires a Huly server with the Process plugin enabled, v0.7.382+).
+>
+> Credits to the upstream authors and contributors — see `LICENSE`.
 
 ## Installation
 
@@ -18,7 +25,7 @@ The standard configuration works with most MCP clients:
   "mcpServers": {
     "huly": {
       "command": "npx",
-      "args": ["-y", "@firfi/huly-mcp@latest"],
+      "args": ["-y", "@dugynoo/huly-mcp@latest"],
       "env": {
         "HULY_URL": "https://huly.app",
         "HULY_EMAIL": "your@email.com",
@@ -39,7 +46,7 @@ claude mcp add huly \
   -e HULY_EMAIL=your@email.com \
   -e HULY_PASSWORD=yourpassword \
   -e HULY_WORKSPACE=yourworkspace \
-  -- npx -y @firfi/huly-mcp@latest
+  -- npx -y @dugynoo/huly-mcp@latest
 ```
 
 Or add to `~/.claude.json` using the standard config above.
@@ -66,7 +73,7 @@ Add to your user settings (`.vscode/mcp.json`) or use Command Palette → "MCP: 
   "servers": {
     "huly": {
       "command": "npx",
-      "args": ["-y", "@firfi/huly-mcp@latest"],
+      "args": ["-y", "@dugynoo/huly-mcp@latest"],
       "env": {
         "HULY_URL": "https://huly.app",
         "HULY_EMAIL": "your@email.com",
@@ -102,7 +109,7 @@ Open the global configuration file (`~/.config/opencode/opencode.json`) and add 
 ```json
 "huly": {
       "type": "local",
-      "command": ["npx", "-y", "@firfi/huly-mcp@latest"],
+      "command": ["npx", "-y", "@dugynoo/huly-mcp@latest"],
       "environment": {
         "HULY_URL": "https://huly.app",
         "HULY_EMAIL": "your@email.com",
@@ -123,7 +130,7 @@ The `@latest` tag in the install command always fetches the newest version. Most
 | **Claude Code** | `claude mcp remove huly` then re-add with the install command above |
 | **Claude Desktop** | Restart the app (it runs `npx` on startup) |
 | **VS Code / Cursor** | Restart the MCP server from the command palette or reload the window |
-| **npx (manual)** | `npx -y @firfi/huly-mcp@latest` — the `-y` flag skips the cache when `@latest` resolves to a new version |
+| **npx (manual)** | `npx -y @dugynoo/huly-mcp@latest` — the `-y` flag skips the cache when `@latest` resolves to a new version |
 
 ## HTTP Transport
 
@@ -135,7 +142,7 @@ HULY_EMAIL=your@email.com \
 HULY_PASSWORD=yourpassword \
 HULY_WORKSPACE=yourworkspace \
 MCP_TRANSPORT=http \
-npx -y @firfi/huly-mcp@latest
+npx -y @dugynoo/huly-mcp@latest
 ```
 
 Server listens on `http://127.0.0.1:3000/mcp` by default.
@@ -143,7 +150,7 @@ Server listens on `http://127.0.0.1:3000/mcp` by default.
 Configure with `MCP_HTTP_PORT` and `MCP_HTTP_HOST`:
 
 ```bash
-MCP_TRANSPORT=http MCP_HTTP_PORT=8080 MCP_HTTP_HOST=0.0.0.0 npx -y @firfi/huly-mcp@latest
+MCP_TRANSPORT=http MCP_HTTP_PORT=8080 MCP_HTTP_HOST=0.0.0.0 npx -y @dugynoo/huly-mcp@latest
 ```
 
 ## Environment Variables

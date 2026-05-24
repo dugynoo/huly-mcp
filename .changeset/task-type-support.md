@@ -1,5 +1,5 @@
 ---
-"@firfi/huly-mcp": minor
+"@dugynoo/huly-mcp": minor
 ---
 
 Add `taskType` parameter to `create_issue` and `update_issue` to support custom Huly task types (e.g., `"Ticket"`, `"Bug"`).

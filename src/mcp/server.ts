@@ -29,7 +29,7 @@ import {
 import type { ToolRegistry } from "./tools/index.js"
 import { CATEGORY_NAMES, createFilteredRegistry, resolveAnnotations, toolRegistry } from "./tools/index.js"
 
-const NPM_PACKAGE_NAME = "@firfi/huly-mcp"
+const NPM_PACKAGE_NAME = "@dugynoo/huly-mcp"
 const VERSION_TOOL_NAME = "get_version"
 
 const versionToolDefinition = {

@@ -1,5 +1,5 @@
 ---
-"@firfi/huly-mcp": minor
+"@dugynoo/huly-mcp": minor
 ---
 
 Add read-side support for the Huly **Process** plugin (server-side feature in v0.7.382+, missing from baseline `@hcengineering/process` package).

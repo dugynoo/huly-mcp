@@ -1,8 +1,8 @@
 {
-  "name": "@firfi/huly-mcp",
-  "version": "0.12.0",
-  "description": "MCP server for Huly integration",
-  "mcpName": "io.github.dearlordylord/huly-mcp",
+  "name": "@dugynoo/huly-mcp",
+  "version": "0.13.0",
+  "description": "MCP server for Huly integration with task type support and Process plugin tools. Fork of @firfi/huly-mcp.",
+  "mcpName": "io.github.dugynoo/huly-mcp",
   "type": "module",
   "main": "./dist/index.cjs",
   "files": [
@@ -13,12 +13,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dearlordylord/huly-mcp.git"
+    "url": "git+https://github.com/dugynoo/huly-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/dearlordylord/huly-mcp/issues"
+    "url": "https://github.com/dugynoo/huly-mcp/issues"
   },
-  "homepage": "https://github.com/dearlordylord/huly-mcp#readme",
+  "homepage": "https://github.com/dugynoo/huly-mcp#readme",
   "scripts": {
     "prepare": "husky",
     "start": "node dist/index.cjs",
@@ -41,7 +41,7 @@
   },
   "bin": {
     "huly-mcp": "./dist/index.cjs",
-    "@firfi/huly-mcp": "./dist/index.cjs"
+    "@dugynoo/huly-mcp": "./dist/index.cjs"
   },
   "keywords": [
     "mcp",
@@ -54,7 +54,10 @@
     "llm"
   ],
   "packageManager": "pnpm@10.29.3",
-  "author": "dearlordylord",
+  "author": "dugynoo",
+  "contributors": [
+    "dearlordylord (original author of @firfi/huly-mcp)"
+  ],
   "license": "MIT",
   "dependencies": {
     "ws": "^8.18.0"

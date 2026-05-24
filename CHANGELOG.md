@@ -1,4 +1,13 @@
-# @firfi/huly-mcp
+# @dugynoo/huly-mcp
+
+## 0.13.0
+
+### Minor Changes
+
+- Add `taskType` parameter to `create_issue` and `update_issue` so issues can be created with custom Huly task types (e.g. `"Ticket"`, `"Bug"`) and project-scoped statuses (such as `"Created"`, `"Awaiting approval"`). Default behaviour is unchanged when `taskType` is omitted.
+- Add read-side support for the Huly **Process** plugin (introduced server-side in v0.7.382): new tools `list_processes`, `get_process`, `list_executions`. Process plugin class refs mirrored manually due to upstream `@hcengineering/*` packages shipping without TypeScript declarations (see [platform#10881](https://github.com/hcengineering/platform/issues/10881)).
+
+> Forked from [`@firfi/huly-mcp@0.12.0`](https://github.com/dearlordylord/huly-mcp).
 
 ## 0.12.0
 

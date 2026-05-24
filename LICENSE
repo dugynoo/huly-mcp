@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2026 @firfi/huly-mcp contributors
+Copyright (c) 2026 dugynoo (Effistream) and @dugynoo/huly-mcp contributors
+Copyright (c) 2026 @firfi/huly-mcp contributors (original upstream)
+
+This package is a fork of @firfi/huly-mcp
+(https://github.com/dearlordylord/huly-mcp).
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
