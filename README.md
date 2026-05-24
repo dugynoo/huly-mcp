@@ -176,7 +176,7 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 <!-- AUTO-GENERATED from src/mcp/tools/ descriptions. Do not edit manually. Run `pnpm update-readme` to regenerate. -->
 ## Available Tools
 
-**`TOOLSETS` categories:** `projects`, `issues`, `comments`, `milestones`, `documents`, `storage`, `attachments`, `contacts`, `channels`, `calendar`, `time tracking`, `search`, `activity`, `notifications`, `workspace`, `cards`, `custom-fields`, `labels`, `leads`, `processes`, `tag-categories`, `task-management`, `test-management`
+**`TOOLSETS` categories:** `projects`, `issues`, `comments`, `milestones`, `documents`, `storage`, `attachments`, `contacts`, `channels`, `calendar`, `time tracking`, `search`, `activity`, `notifications`, `workspace`, `associations`, `cards`, `custom-fields`, `labels`, `leads`, `processes`, `tag-categories`, `task-management`, `test-management`, `user-statuses`
 
 ### Projects
 
@@ -404,6 +404,16 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 | `create_access_link` | Create a Huly workspace access link. Defaults to role GUEST. Supports anonymous reusable guest links by setting personalized=false with notBefore and expiration, and can restrict access to specific Huly space IDs via spaces. |
 | `get_regions` | Get available regions for workspace creation. Returns region codes and display names. |
 
+### Associations
+
+| Tool | Description |
+|------|-------------|
+| `list_associations` | List Huly Association definitions in the workspace. Each Association is a typed link between two document classes (e.g. Person ↔ Organization with cardinality 1:1 / 1:N / N:N). Filter by `classA` or `classB`. |
+| `create_association` | Create a new Huly Association between two document classes. Idempotent: returns existing association if one already exists with the same (classA, classB, nameA, nameB) tuple. |
+| `list_relations` | List Huly Relations — concrete links between documents. Filter by `association` (ID), `docA` (source document ID), or `docB` (target document ID). |
+| `create_relation` | Link two documents through an existing Association. Idempotent: returns existing relation if one already connects (docA, docB) via the same association. |
+| `delete_relation` | Remove a Relation between two documents. Idempotent: returns deleted=false if the relation no longer exists. |
+
 ### Cards
 
 | Tool | Description |
@@ -448,6 +458,8 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 | `list_processes` | List Huly Process definitions in the workspace. Each Process is a workflow attached to a card class (master tag). Optionally filter by `masterTag` to find processes for a specific card type. Read-only. |
 | `get_process` | Fetch a single Huly Process definition by ID or display name. Returns name, description, master tag, and start/automation flags. Read-only. |
 | `list_executions` | List Process Executions — live or completed workflow runs against specific cards. Filter by `process` (ID or name), `card` (card ID), or `status` (active/done/cancelled). Each execution row includes the current workflow state and an error flag. Read-only. |
+| `start_process` | Start a new Process execution against a card. Resolves the process by ID or display name and creates an active Execution at the first workflow state (lowest rank). The Huly server's process engine then auto-fires OnExecutionStart triggers to advance the execution. |
+| `cancel_execution` | Cancel an in-flight Process execution by setting its status to 'cancelled'. Idempotent — already-cancelled executions return cancelled=false. |
 
 ### Tag-Categories
 
@@ -501,6 +513,12 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 | `update_test_result` | Update a test result's status, assignee, or description. Status values: untested, blocked, passed, failed. |
 | `delete_test_result` | Permanently delete a test result. Cannot be undone. |
 | `run_test_plan` | Execute a test plan: creates a test run and one test result per plan item. Returns the run ID and count of results created. Optionally name the run and set a due date. |
+
+### User-Statuses
+
+| Tool | Description |
+|------|-------------|
+| `list_user_statuses` | List Huly user presence records — who is currently online, with their account UUID and last status change timestamp. Filter by `online` (true/false) or `user` (account UUID). Read-only; presence is maintained server-side based on websocket connection state. |
 
 <!-- tools:end -->
 

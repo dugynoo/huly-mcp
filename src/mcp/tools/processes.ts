@@ -4,14 +4,24 @@
  * @module
  */
 import {
+  cancelExecutionParamsJsonSchema,
   getProcessParamsJsonSchema,
   listExecutionsParamsJsonSchema,
   listProcessesParamsJsonSchema,
+  parseCancelExecutionParams,
   parseGetProcessParams,
   parseListExecutionsParams,
-  parseListProcessesParams
+  parseListProcessesParams,
+  parseStartProcessParams,
+  startProcessParamsJsonSchema
 } from "../../domain/schemas.js"
-import { getProcess, listExecutions, listProcesses } from "../../huly/operations/processes.js"
+import {
+  cancelExecution,
+  getProcess,
+  listExecutions,
+  listProcesses,
+  startProcess
+} from "../../huly/operations/processes.js"
 import { createToolHandler, type RegisteredTool } from "./registry.js"
 
 const CATEGORY = "processes" as const
@@ -51,6 +61,30 @@ export const processTools: ReadonlyArray<RegisteredTool> = [
       "list_executions",
       parseListExecutionsParams,
       listExecutions
+    )
+  },
+  {
+    name: "start_process",
+    description:
+      "Start a new Process execution against a card. Resolves the process by ID or display name and creates an active Execution at the first workflow state (lowest rank). The Huly server's process engine then auto-fires OnExecutionStart triggers to advance the execution.",
+    category: CATEGORY,
+    inputSchema: startProcessParamsJsonSchema,
+    handler: createToolHandler(
+      "start_process",
+      parseStartProcessParams,
+      startProcess
+    )
+  },
+  {
+    name: "cancel_execution",
+    description:
+      "Cancel an in-flight Process execution by setting its status to 'cancelled'. Idempotent — already-cancelled executions return cancelled=false.",
+    category: CATEGORY,
+    inputSchema: cancelExecutionParamsJsonSchema,
+    handler: createToolHandler(
+      "cancel_execution",
+      parseCancelExecutionParams,
+      cancelExecution
     )
   }
 ]

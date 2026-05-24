@@ -8,23 +8,28 @@
  *
  * @module
  */
-import type { Class, Doc, Ref } from "@hcengineering/core"
+import type { Class, Doc, Ref, Space } from "@hcengineering/core"
 import { SortingOrder } from "@hcengineering/core"
 import { Effect } from "effect"
 
 import type {
+  CancelExecutionParams,
+  CancelExecutionResult,
   ExecutionStatus,
   GetProcessParams,
   ListExecutionsParams,
   ListExecutionsResult,
   ListProcessesParams,
   ListProcessesResult,
-  ProcessSummary
+  ProcessSummary,
+  StartProcessParams,
+  StartProcessResult
 } from "../../domain/schemas/processes.js"
 import { ExecutionIdSchema, ProcessIdSchema } from "../../domain/schemas/processes.js"
 import { normalizeForComparison } from "../../utils/normalize.js"
 import { HulyClient, type HulyClientError } from "../client.js"
 import { HulyError } from "../errors.js"
+import { core } from "../huly-plugins.js"
 import {
   type HulyExecution,
   type HulyProcess,
@@ -163,5 +168,93 @@ export const listExecutions = (
         ...(e.parentId !== undefined ? { parentExecutionId: ExecutionIdSchema.make(e.parentId) } : {})
       })),
       total: executions.length
+    }
+  })
+
+export const startProcess = (
+  params: StartProcessParams
+): Effect.Effect<StartProcessResult, ProcessOpsError, HulyClient> =>
+  Effect.gen(function*() {
+    const client = yield* HulyClient
+    const process = yield* resolveProcess(client, params.process)
+
+    const firstState = yield* client.findOne<HulyState>(
+      stateClass,
+      { process: process._id },
+      { sort: { rank: SortingOrder.Ascending } }
+    )
+    if (firstState === undefined) {
+      return yield* Effect.fail(
+        new HulyError({
+          message: `Process '${process.name}' has no States defined. Configure a workflow before starting executions.`
+        })
+      )
+    }
+
+    // SDK boundary: HulyExecution is a shim mirroring the upstream Process
+    // plugin interface (see types-extension/process.ts). Data<HulyExecution>
+    // wants `context: ExecutionContext` (a branded record); we pass `{}`
+    // because the server initialises the context map from the process
+    // definition on trigger fire.
+    // eslint-disable-next-line no-restricted-syntax -- SDK boundary cast for shim Data type
+    const executionAttrs = {
+      process: process._id,
+      currentState: firstState._id,
+      card: toRef<Doc>(params.card),
+      rollback: [],
+      context: {},
+      status: "active"
+    } as unknown as Parameters<typeof client.createDoc<HulyExecution>>[2]
+
+    const executionId = yield* client.createDoc<HulyExecution>(
+      executionClass,
+      toRef<Space>(core.space.Workspace),
+      executionAttrs
+    )
+
+    return {
+      executionId: ExecutionIdSchema.make(executionId),
+      processId: ProcessIdSchema.make(process._id),
+      cardId: params.card,
+      currentStateId: firstState._id,
+      status: "active" satisfies ExecutionStatus
+    }
+  })
+
+export const cancelExecution = (
+  params: CancelExecutionParams
+): Effect.Effect<CancelExecutionResult, ProcessOpsError, HulyClient> =>
+  Effect.gen(function*() {
+    const client = yield* HulyClient
+    const execution = yield* client.findOne<HulyExecution>(executionClass, {
+      _id: toRef<HulyExecution>(params.execution)
+    })
+    if (execution === undefined) {
+      return yield* Effect.fail(
+        new HulyError({ message: `Execution '${params.execution}' not found.` })
+      )
+    }
+    if (execution.status === "cancelled") {
+      return {
+        executionId: ExecutionIdSchema.make(execution._id),
+        status: "cancelled" satisfies ExecutionStatus,
+        cancelled: false
+      }
+    }
+
+    const updateOps: Parameters<typeof client.updateDoc<HulyExecution>>[3] = {
+      status: "cancelled" satisfies HulyExecution["status"]
+    }
+    yield* client.updateDoc<HulyExecution>(
+      executionClass,
+      execution.space,
+      execution._id,
+      updateOps
+    )
+
+    return {
+      executionId: ExecutionIdSchema.make(execution._id),
+      status: "cancelled" satisfies ExecutionStatus,
+      cancelled: true
     }
   })

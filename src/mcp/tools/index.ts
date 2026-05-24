@@ -3,6 +3,7 @@ import type { HulyStorageClient } from "../../huly/storage.js"
 import type { WorkspaceClientOperations } from "../../huly/workspace-client.js"
 import type { McpToolResponse } from "../error-mapping.js"
 import { activityTools } from "./activity.js"
+import { associationTools } from "./associations.js"
 import { attachmentTools } from "./attachments.js"
 import { calendarTools } from "./calendar.js"
 import { cardTools } from "./cards.js"
@@ -28,6 +29,7 @@ import { taskManagementTools } from "./task-management.js"
 import { testManagementCoreTools } from "./test-management-core.js"
 import { testManagementPlansTools } from "./test-management-plans.js"
 import { timeTools } from "./time.js"
+import { userStatusTools } from "./user-statuses.js"
 import { workspaceTools } from "./workspace.js"
 
 const allTools: ReadonlyArray<RegisteredTool> = [
@@ -55,7 +57,9 @@ const allTools: ReadonlyArray<RegisteredTool> = [
   ...taskManagementTools,
   ...testManagementCoreTools,
   ...testManagementPlansTools,
-  ...processTools
+  ...processTools,
+  ...associationTools,
+  ...userStatusTools
 ]
 
 export const CATEGORY_NAMES: ReadonlySet<string> = new Set(

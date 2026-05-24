@@ -119,10 +119,59 @@ export const ListExecutionsResultSchema = Schema.Struct({
 })
 export type ListExecutionsResult = Schema.Schema.Type<typeof ListExecutionsResultSchema>
 
+export const StartProcessParamsSchema = Schema.Struct({
+  process: NonEmptyString.annotations({
+    description: "Process ID or display name"
+  }),
+  card: NonEmptyString.annotations({
+    description: "Card ID to start the process against"
+  })
+}).annotations({
+  title: "StartProcessParams",
+  description: "Parameters for starting a Huly process execution"
+})
+export type StartProcessParams = Schema.Schema.Type<typeof StartProcessParamsSchema>
+
+export const StartProcessResultSchema = Schema.Struct({
+  executionId: ExecutionIdSchema,
+  processId: ProcessIdSchema,
+  cardId: NonEmptyString,
+  currentStateId: NonEmptyString,
+  status: ExecutionStatusSchema
+}).annotations({
+  title: "StartProcessResult",
+  description: "Result of start_process"
+})
+export type StartProcessResult = Schema.Schema.Type<typeof StartProcessResultSchema>
+
+export const CancelExecutionParamsSchema = Schema.Struct({
+  execution: ExecutionIdSchema.annotations({
+    description: "Execution ID to cancel"
+  })
+}).annotations({
+  title: "CancelExecutionParams",
+  description: "Parameters for cancelling a process execution"
+})
+export type CancelExecutionParams = Schema.Schema.Type<typeof CancelExecutionParamsSchema>
+
+export const CancelExecutionResultSchema = Schema.Struct({
+  executionId: ExecutionIdSchema,
+  status: ExecutionStatusSchema,
+  cancelled: Schema.Boolean
+}).annotations({
+  title: "CancelExecutionResult",
+  description: "Result of cancel_execution"
+})
+export type CancelExecutionResult = Schema.Schema.Type<typeof CancelExecutionResultSchema>
+
 export const listProcessesParamsJsonSchema = JSONSchema.make(ListProcessesParamsSchema)
 export const getProcessParamsJsonSchema = JSONSchema.make(GetProcessParamsSchema)
 export const listExecutionsParamsJsonSchema = JSONSchema.make(ListExecutionsParamsSchema)
+export const startProcessParamsJsonSchema = JSONSchema.make(StartProcessParamsSchema)
+export const cancelExecutionParamsJsonSchema = JSONSchema.make(CancelExecutionParamsSchema)
 
 export const parseListProcessesParams = Schema.decodeUnknown(ListProcessesParamsSchema)
 export const parseGetProcessParams = Schema.decodeUnknown(GetProcessParamsSchema)
 export const parseListExecutionsParams = Schema.decodeUnknown(ListExecutionsParamsSchema)
+export const parseStartProcessParams = Schema.decodeUnknown(StartProcessParamsSchema)
+export const parseCancelExecutionParams = Schema.decodeUnknown(CancelExecutionParamsSchema)

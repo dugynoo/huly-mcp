@@ -1,5 +1,15 @@
 # @dugynoo/huly-mcp
 
+## 0.14.0
+
+### Minor Changes
+
+- **Process write-side ops** — added `start_process` and `cancel_execution` MCP tools. `start_process` resolves the process by ID/name, locates the first workflow state (lowest rank), and creates an active Execution; the Huly server's process engine then auto-fires OnExecutionStart triggers. `cancel_execution` is idempotent.
+- **Associations module (new)** — added 5 tools for the `core:class:Association` / `core:class:Relation` graph: `list_associations`, `create_association`, `list_relations`, `create_relation`, `delete_relation`. Both creates are idempotent.
+- **User Statuses module (new)** — added `list_user_statuses` tool reading from `core:class:UserStatus` so agents can answer "who is online right now?" with timestamps.
+
+Total tool count: 209 → 218 (8 new + 1 modified).
+
 ## 0.13.0
 
 ### Minor Changes

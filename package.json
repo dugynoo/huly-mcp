@@ -1,6 +1,6 @@
 {
   "name": "@dugynoo/huly-mcp",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Complete MCP server for Huly project management with 209 tools across 23 categories. Supports custom task types, project-scoped status workflows, and read-side Process plugin tools.",
   "mcpName": "io.github.dugynoo/huly-mcp",
   "type": "module",
