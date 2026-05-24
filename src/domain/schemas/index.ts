@@ -1275,3 +1275,32 @@ export {
   parseListFunnelsParams,
   parseListLeadsParams
 } from "./leads.js"
+
+export {
+  type ExecutionId,
+  ExecutionIdSchema,
+  type ExecutionStatus,
+  ExecutionStatusSchema,
+  type ExecutionSummary,
+  ExecutionSummarySchema,
+  type GetProcessParams,
+  getProcessParamsJsonSchema,
+  GetProcessParamsSchema,
+  type ListExecutionsParams,
+  listExecutionsParamsJsonSchema,
+  ListExecutionsParamsSchema,
+  type ListExecutionsResult,
+  ListExecutionsResultSchema,
+  type ListProcessesParams,
+  listProcessesParamsJsonSchema,
+  ListProcessesParamsSchema,
+  type ListProcessesResult,
+  ListProcessesResultSchema,
+  parseGetProcessParams,
+  parseListExecutionsParams,
+  parseListProcessesParams,
+  type ProcessId,
+  ProcessIdSchema,
+  type ProcessSummary,
+  ProcessSummarySchema
+} from "./processes.js"
