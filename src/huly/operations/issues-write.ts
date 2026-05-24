@@ -17,6 +17,7 @@ import {
   type Status
 } from "@hcengineering/core"
 import { makeRank } from "@hcengineering/rank"
+import type { TaskType } from "@hcengineering/task"
 import { type Issue as HulyIssue, type IssueParentInfo, type Project as HulyProject } from "@hcengineering/tracker"
 import { Effect, Schema } from "effect"
 
@@ -24,7 +25,7 @@ import type { CreateIssueParams, DeleteIssueParams, UpdateIssueParams } from "..
 import type { CreateIssueResult, DeleteIssueResult, UpdateIssueResult } from "../../domain/schemas/issues.js"
 import { IssueId, IssueIdentifier } from "../../domain/schemas/shared.js"
 import type { HulyClient, HulyClientError } from "../client.js"
-import type { IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
+import type { HulyError, IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
 import { InvalidStatusError, PersonNotFoundError } from "../errors.js"
 import { tracker } from "../huly-plugins.js"
 import { findPersonByEmailOrName } from "./contacts-shared.js"
@@ -33,6 +34,7 @@ import {
   findProjectAndIssue,
   findProjectWithStatuses,
   resolveStatusByName,
+  resolveTaskTypeForProject,
   type StatusInfo,
   stringToPriority
 } from "./issues-shared.js"
@@ -44,6 +46,7 @@ type CreateIssueError =
   | IssueNotFoundError
   | InvalidStatusError
   | PersonNotFoundError
+  | HulyError
 
 type UpdateIssueError =
   | HulyClientError
@@ -51,6 +54,7 @@ type UpdateIssueError =
   | IssueNotFoundError
   | InvalidStatusError
   | PersonNotFoundError
+  | HulyError
 
 type DeleteIssueError =
   | HulyClientError
@@ -96,7 +100,23 @@ export const createIssue = (
   params: CreateIssueParams
 ): Effect.Effect<CreateIssueResult, CreateIssueError, HulyClient> =>
   Effect.gen(function*() {
-    const { client, defaultStatusId, project, statuses } = yield* findProjectWithStatuses(params.project)
+    const { client, defaultStatusId, project, statuses: projectStatuses } = yield* findProjectWithStatuses(
+      params.project
+    )
+
+    // Resolve task type. When provided, status candidates and `kind` are scoped
+    // to that task type's workflow; otherwise we use the project-wide statuses
+    // and the default `tracker.taskTypes.Issue` kind.
+    const taskTypeResolved: { taskType: TaskType; statuses: Array<StatusInfo> } | undefined =
+      params.taskType !== undefined
+        ? yield* resolveTaskTypeForProject(client, project, params.taskType)
+        : undefined
+
+    const effectiveStatuses: Array<StatusInfo> = taskTypeResolved?.statuses ?? projectStatuses
+    const effectiveDefaultStatusId: Ref<Status> | undefined = taskTypeResolved !== undefined
+      ? taskTypeResolved.taskType.statuses[0]
+      : defaultStatusId
+    const kind: Ref<TaskType> = taskTypeResolved?.taskType._id ?? tracker.taskTypes.Issue
 
     const issueId: Ref<HulyIssue> = generateId()
 
@@ -111,9 +131,9 @@ export const createIssue = (
     const sequence = extractUpdatedSequence(incResult) ?? project.sequence + 1
 
     const statusRef: Ref<Status> = params.status !== undefined
-      ? yield* resolveStatusByName(statuses, params.status, params.project)
-      : defaultStatusId !== undefined
-      ? defaultStatusId
+      ? yield* resolveStatusByName(effectiveStatuses, params.status, params.project)
+      : effectiveDefaultStatusId !== undefined
+      ? effectiveDefaultStatusId
       : yield* Effect.fail(new InvalidStatusError({ status: "(default)", project: params.project }))
 
     const assigneeRef: Ref<Person> | null = params.assignee !== undefined
@@ -178,7 +198,7 @@ export const createIssue = (
       description: descriptionMarkupRef,
       status: statusRef,
       number: sequence,
-      kind: tracker.taskTypes.Issue,
+      kind,
       identifier,
       priority,
       assignee: assigneeRef,
@@ -225,9 +245,18 @@ export const updateIssue = (
   Effect.gen(function*() {
     const { client, issue, project } = yield* findProjectAndIssue(params)
 
-    const statuses: Array<StatusInfo> = params.status !== undefined
+    // Resolve target task type when caller is switching it. Used for both the
+    // `kind` update and to scope `status` resolution to the new task type's
+    // workflow.
+    const taskTypeResolved: { taskType: TaskType; statuses: Array<StatusInfo> } | undefined =
+      params.taskType !== undefined
+        ? yield* resolveTaskTypeForProject(client, project, params.taskType)
+        : undefined
+
+    const projectStatuses: Array<StatusInfo> = params.status !== undefined && taskTypeResolved === undefined
       ? (yield* findProjectWithStatuses(params.project)).statuses
       : []
+    const effectiveStatuses: Array<StatusInfo> = taskTypeResolved?.statuses ?? projectStatuses
 
     const updateOps: DocumentUpdate<HulyIssue> = {}
     let descriptionUpdatedInPlace = false
@@ -262,8 +291,12 @@ export const updateIssue = (
       }
     }
 
+    if (taskTypeResolved !== undefined) {
+      updateOps.kind = taskTypeResolved.taskType._id
+    }
+
     if (params.status !== undefined) {
-      updateOps.status = yield* resolveStatusByName(statuses, params.status, params.project)
+      updateOps.status = yield* resolveStatusByName(effectiveStatuses, params.status, params.project)
     }
 
     if (params.priority !== undefined) {

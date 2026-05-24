@@ -210,6 +210,10 @@ export const CreateIssueParamsSchema = Schema.Struct({
   status: Schema.optional(StatusName.annotations({
     description: "Initial status (uses project default if not specified)"
   })),
+  taskType: Schema.optional(NonEmptyString.annotations({
+    description:
+      "Task type name or ID (e.g., 'Ticket', 'Bug', 'Issue'). Determines which workflow this issue follows and which statuses are valid. If omitted, the default 'Issue' task type is used. Available task types can be listed via list_task_types."
+  })),
   parentIssue: Schema.optional(IssueIdentifier.annotations({
     description: "Parent issue identifier (e.g., 'HULY-42') to create as sub-issue"
   })),
@@ -251,6 +255,10 @@ export const UpdateIssueParamsSchema = Schema.Struct({
   ),
   status: Schema.optional(StatusName.annotations({
     description: "New status"
+  })),
+  taskType: Schema.optional(NonEmptyString.annotations({
+    description:
+      "New task type name or ID (e.g., 'Ticket', 'Bug', 'Issue'). Switching task type may invalidate the current status — pass `status` alongside to set a status valid for the new task type. Available task types can be listed via list_task_types."
   })),
   dueDate: Schema.optional(
     Schema.NullOr(Timestamp).annotations({

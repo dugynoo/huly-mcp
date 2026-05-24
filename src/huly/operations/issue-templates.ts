@@ -52,7 +52,7 @@ import {
   PersonName
 } from "../../domain/schemas/shared.js"
 import type { HulyClient, HulyClientError } from "../client.js"
-import type { InvalidStatusError, IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
+import type { HulyError, InvalidStatusError, IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
 import {
   ComponentNotFoundError,
   IssueTemplateNotFoundError,
@@ -90,6 +90,7 @@ type CreateIssueFromTemplateError =
   | IssueTemplateNotFoundError
   | InvalidStatusError
   | PersonNotFoundError
+  | HulyError
 
 type UpdateIssueTemplateError =
   | HulyClientError

@@ -1,5 +1,5 @@
 import type { DocumentQuery, Ref, Status, WithLookup } from "@hcengineering/core"
-import type { ProjectType } from "@hcengineering/task"
+import type { ProjectType, TaskType } from "@hcengineering/task"
 import type { Issue as HulyIssue, Project as HulyProject } from "@hcengineering/tracker"
 import { IssuePriority } from "@hcengineering/tracker"
 import { Effect } from "effect"
@@ -9,7 +9,7 @@ import type { NonNegativeNumber } from "../../domain/schemas/shared.js"
 import { PositiveNumber } from "../../domain/schemas/shared.js"
 import { normalizeForComparison } from "../../utils/normalize.js"
 import { HulyClient, type HulyClientError } from "../client.js"
-import { InvalidStatusError, IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
+import { HulyError, InvalidStatusError, IssueNotFoundError, ProjectNotFoundError } from "../errors.js"
 import { core, task, tracker } from "../huly-plugins.js"
 import { findOneOrFail } from "./query-helpers.js"
 
@@ -253,3 +253,82 @@ export const resolveStatusByName = (
   }
   return Effect.succeed(matchingStatus._id)
 }
+
+/**
+ * Resolve a task type within a project's project type by ID or display name,
+ * and return its statuses (scoped to that task type) as StatusInfo[].
+ *
+ * Uses the project's `type: Ref<ProjectType>` field to scope the lookup, so
+ * the same task type name in another project type will not match.
+ *
+ * Falls back to ref-derived names if `core.class.Status` query fails — same
+ * fallback strategy as `findProjectWithStatuses`.
+ */
+export const resolveTaskTypeForProject = (
+  client: HulyClient["Type"],
+  project: HulyProject,
+  taskTypeRef: string
+): Effect.Effect<
+  { taskType: TaskType; statuses: Array<StatusInfo> },
+  HulyError | HulyClientError
+> =>
+  Effect.gen(function*() {
+    const taskTypes = yield* client.findAll<TaskType>(
+      task.class.TaskType,
+      { parent: project.type }
+    )
+
+    const normalizedInput = normalizeForComparison(taskTypeRef)
+    const matching = taskTypes.filter(tt =>
+      tt._id === taskTypeRef
+      || normalizeForComparison(tt.name) === normalizedInput
+    )
+
+    if (matching.length !== 1) {
+      return yield* Effect.fail(
+        new HulyError({
+          message: matching.length === 0
+            ? `Task type '${taskTypeRef}' not found in project '${project.identifier}'. `
+              + `Available: ${taskTypes.map(t => t.name).join(", ") || "(none)"}.`
+            : `Task type '${taskTypeRef}' is ambiguous in project '${project.identifier}'. `
+              + `Pass the task type ID instead.`
+        })
+      )
+    }
+
+    const taskType = matching[0]
+    const statusRefs = taskType.statuses
+
+    const statuses: Array<StatusInfo> = []
+    if (statusRefs.length > 0) {
+      const statusDocsResult = yield* Effect.either(
+        client.findAll<Status>(core.class.Status, { _id: { $in: [...statusRefs] } })
+      )
+
+      if (statusDocsResult._tag === "Right") {
+        for (const doc of statusDocsResult.right) {
+          const categoryStr = doc.category ? doc.category : ""
+          statuses.push({
+            _id: doc._id,
+            name: doc.name,
+            isDone: categoryStr === task.statusCategory.Won,
+            isCanceled: categoryStr === task.statusCategory.Lost
+          })
+        }
+      } else {
+        // Fallback: use refs without resolved names if Status query fails
+        for (const ref of statusRefs) {
+          const name = ref.split(":").pop() ?? "Unknown"
+          const nameLower = name.toLowerCase()
+          statuses.push({
+            _id: ref,
+            name,
+            isDone: nameLower.includes("done") || nameLower.includes("complete"),
+            isCanceled: nameLower.includes("cancel")
+          })
+        }
+      }
+    }
+
+    return { taskType, statuses }
+  })
