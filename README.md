@@ -167,7 +167,7 @@ MCP_TRANSPORT=http MCP_HTTP_PORT=8080 MCP_HTTP_HOST=0.0.0.0 npx -y @firfi/huly-m
 <!-- AUTO-GENERATED from src/mcp/tools/ descriptions. Do not edit manually. Run `pnpm update-readme` to regenerate. -->
 ## Available Tools
 
-**`TOOLSETS` categories:** `projects`, `issues`, `comments`, `milestones`, `documents`, `storage`, `attachments`, `contacts`, `channels`, `calendar`, `time tracking`, `search`, `activity`, `notifications`, `workspace`, `cards`, `custom-fields`, `labels`, `leads`, `tag-categories`, `task-management`, `test-management`
+**`TOOLSETS` categories:** `projects`, `issues`, `comments`, `milestones`, `documents`, `storage`, `attachments`, `contacts`, `channels`, `calendar`, `time tracking`, `search`, `activity`, `notifications`, `workspace`, `cards`, `custom-fields`, `labels`, `leads`, `processes`, `tag-categories`, `task-management`, `test-management`
 
 ### Projects
 
@@ -431,6 +431,14 @@ MCP_TRANSPORT=http MCP_HTTP_PORT=8080 MCP_HTTP_HOST=0.0.0.0 npx -y @firfi/huly-m
 | `list_funnels` | List all Huly sales funnels (lead pipelines). Returns each funnel's stable ID and display name, sorted by name. Supports filtering by archived status. |
 | `list_leads` | Query Huly leads in a funnel with optional filters. Pass the funnel ID returned by list_funnels, or a funnel name for convenience lookup. Returns leads sorted by modification date (newest first). Supports filtering by status, assignee, and title search. |
 | `get_lead` | Retrieve full details for a Huly lead including markdown description, customer name, funnel ID and funnel name, and status. Lead identifiers follow the upstream Huly format like 'LEAD-1'. |
+
+### Processes
+
+| Tool | Description |
+|------|-------------|
+| `list_processes` | List Huly Process definitions in the workspace. Each Process is a workflow attached to a card class (master tag). Optionally filter by `masterTag` to find processes for a specific card type. Read-only. |
+| `get_process` | Fetch a single Huly Process definition by ID or display name. Returns name, description, master tag, and start/automation flags. Read-only. |
+| `list_executions` | List Process Executions — live or completed workflow runs against specific cards. Filter by `process` (ID or name), `card` (card ID), or `status` (active/done/cancelled). Each execution row includes the current workflow state and an error flag. Read-only. |
 
 ### Tag-Categories
 
