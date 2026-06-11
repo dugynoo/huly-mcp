@@ -1,6 +1,8 @@
 import {
   createWorkSlotParamsJsonSchema,
   CreateWorkSlotResultSchema,
+  dedupPlannerTodosParamsJsonSchema,
+  DedupPlannerTodosResultSchema,
   DetailedTimeReportSchema,
   getDetailedTimeReportParamsJsonSchema,
   getTimeReportParamsJsonSchema,
@@ -11,6 +13,7 @@ import {
   logTimeParamsJsonSchema,
   LogTimeResultSchema,
   parseCreateWorkSlotParams,
+  parseDedupPlannerTodosParams,
   parseGetDetailedTimeReportParams,
   parseGetTimeReportParams,
   parseListTimeSpendReportsParams,
@@ -26,6 +29,7 @@ import {
 } from "../../domain/schemas.js"
 import {
   createWorkSlot,
+  dedupPlannerTodos,
   getDetailedTimeReport,
   getTimeReport,
   listTimeSpendReports,
@@ -140,6 +144,21 @@ export const timeTools: ReadonlyArray<RegisteredTool> = [
       parseStopTimerParams,
       stopTimer,
       StopTimerResultSchema
+    )
+  },
+  {
+    name: "dedup_planner_todos",
+    description: "Remove duplicate Planner ToDo items that the Huly server sometimes creates more than once per issue "
+      + "(causing tickets to appear multiple times in Planner). Groups ToDos by issue and owner, keeps one per "
+      + "group (preferring a scheduled, then not-done, then oldest entry) and removes the rest. Dry-run by default; "
+      + "pass apply=true to actually delete. Optionally scope to a single project via the project parameter.",
+    category: CATEGORY,
+    inputSchema: dedupPlannerTodosParamsJsonSchema,
+    handler: createEncodedToolHandler(
+      "dedup_planner_todos",
+      parseDedupPlannerTodosParams,
+      dedupPlannerTodos,
+      DedupPlannerTodosResultSchema
     )
   }
 ]

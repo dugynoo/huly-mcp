@@ -179,6 +179,22 @@ export const StopTimerParamsSchema = Schema.Struct({
 
 export type StopTimerParams = Schema.Schema.Type<typeof StopTimerParamsSchema>
 
+export const DedupPlannerTodosParamsSchema = Schema.Struct({
+  project: Schema.optional(ProjectIdentifier.annotations({
+    description:
+      "Optional project identifier (e.g., 'JAMTX') to limit dedup to a single project. Omit to scan all projects."
+  })),
+  apply: Schema.optional(Schema.Boolean.annotations({
+    description:
+      "When true, actually removes the duplicate ToDos. When false or omitted, returns a dry-run preview without deleting anything."
+  }))
+}).annotations({
+  title: "DedupPlannerTodosParams",
+  description: "Parameters for de-duplicating Planner ToDos that the Huly server created more than once per issue"
+})
+
+export type DedupPlannerTodosParams = Schema.Schema.Type<typeof DedupPlannerTodosParamsSchema>
+
 // No codec needed — internal type, not used for runtime validation
 export interface DetailedTimeReport {
   readonly project: ProjectIdentifier
@@ -202,6 +218,7 @@ export const listWorkSlotsParamsJsonSchema = JSONSchema.make(ListWorkSlotsParams
 export const createWorkSlotParamsJsonSchema = JSONSchema.make(CreateWorkSlotParamsSchema)
 export const startTimerParamsJsonSchema = JSONSchema.make(StartTimerParamsSchema)
 export const stopTimerParamsJsonSchema = JSONSchema.make(StopTimerParamsSchema)
+export const dedupPlannerTodosParamsJsonSchema = JSONSchema.make(DedupPlannerTodosParamsSchema)
 
 export const parseLogTimeParams = Schema.decodeUnknown(LogTimeParamsSchema)
 export const parseGetTimeReportParams = Schema.decodeUnknown(GetTimeReportParamsSchema)
@@ -211,6 +228,7 @@ export const parseListWorkSlotsParams = Schema.decodeUnknown(ListWorkSlotsParams
 export const parseCreateWorkSlotParams = Schema.decodeUnknown(CreateWorkSlotParamsSchema)
 export const parseStartTimerParams = Schema.decodeUnknown(StartTimerParamsSchema)
 export const parseStopTimerParams = Schema.decodeUnknown(StopTimerParamsSchema)
+export const parseDedupPlannerTodosParams = Schema.decodeUnknown(DedupPlannerTodosParamsSchema)
 
 // No codec needed — internal type, not used for runtime validation
 export interface LogTimeResult {
@@ -299,3 +317,17 @@ export const StopTimerResultSchema = Schema.Struct({
 
 export const ListTimeSpendReportsResultSchema = Schema.Array(TimeSpendReportWireSchema)
 export const ListWorkSlotsResultSchema = Schema.Array(WorkSlotWireSchema)
+
+export const DedupPlannerTodosResultSchema = Schema.Struct({
+  applied: Schema.Boolean,
+  totalTodos: Schema.Number,
+  duplicateGroups: Schema.Number,
+  removedCount: Schema.Number,
+  removed: Schema.Array(Schema.Struct({
+    issue: Schema.optional(Schema.String),
+    todoId: Schema.String,
+    done: Schema.Boolean
+  }))
+})
+
+export type DedupPlannerTodosResult = Schema.Schema.Type<typeof DedupPlannerTodosResultSchema>

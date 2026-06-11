@@ -350,6 +350,7 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 | `create_work_slot` | Create a scheduled work slot. Attaches a time block to a ToDo for planning purposes. |
 | `start_timer` | Start a client-side timer on a Huly issue. Validates the issue exists and returns a start timestamp. Use log_time to record the elapsed time when done. |
 | `stop_timer` | Stop a client-side timer on a Huly issue. Returns the stop timestamp. Calculate elapsed time from start/stop timestamps and use log_time to record it. |
+| `dedup_planner_todos` | Remove duplicate Planner ToDo items that the Huly server sometimes creates more than once per issue  |
 
 ### Search
 
