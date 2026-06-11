@@ -199,6 +199,18 @@ export interface HulyClientOperations extends HulyClientContext {
     options?: FindOptions<T>
   ) => Effect.Effect<WithLookup<T> | undefined, HulyClientError>
 
+  /**
+   * Query documents from the client-side model (ModelDb) instead of the server.
+   * Model-space documents (e.g. Status/IssueStatus of project types) are already
+   * loaded into the local model at connection time, so this works even on
+   * workspaces where the remote Status query fails on malformed model txes.
+   */
+  readonly findAllInModel: <T extends Doc>(
+    _class: Ref<Class<T>>,
+    query: DocumentQuery<T>,
+    options?: FindOptions<T>
+  ) => Effect.Effect<FindResult<T>, HulyClientError>
+
   readonly createDoc: <T extends Doc>(
     _class: Ref<Class<T>>,
     space: Ref<Space>,
@@ -228,6 +240,15 @@ export interface HulyClientOperations extends HulyClientContext {
     _class: Ref<Class<T>>,
     space: Ref<Space>,
     objectId: Ref<T>
+  ) => Effect.Effect<TxResult, HulyClientError>
+
+  readonly removeCollection: <T extends Doc, P extends AttachedDoc>(
+    _class: Ref<Class<P>>,
+    space: Ref<Space>,
+    objectId: Ref<P>,
+    attachedTo: Ref<T>,
+    attachedToClass: Ref<Class<T>>,
+    collection: string
   ) => Effect.Effect<TxResult, HulyClientError>
 
   readonly uploadMarkup: (
@@ -352,6 +373,16 @@ export class HulyClient extends Context.Tag("@hulymcp/HulyClient")<
             "findOne failed"
           ),
 
+        findAllInModel: <T extends Doc>(
+          _class: Ref<Class<T>>,
+          query: DocumentQuery<T>,
+          options?: FindOptions<T>
+        ) =>
+          withClient(
+            (client) => Promise.resolve(client.getModel().findAllSync(_class, query, options)),
+            "findAllInModel failed"
+          ),
+
         createDoc: <T extends Doc>(
           _class: Ref<Class<T>>,
           space: Ref<Space>,
@@ -406,6 +437,19 @@ export class HulyClient extends Context.Tag("@hulymcp/HulyClient")<
           withClient(
             (client) => client.removeDoc(_class, space, objectId),
             "removeDoc failed"
+          ),
+
+        removeCollection: <T extends Doc, P extends AttachedDoc>(
+          _class: Ref<Class<P>>,
+          space: Ref<Space>,
+          objectId: Ref<P>,
+          attachedTo: Ref<T>,
+          attachedToClass: Ref<Class<T>>,
+          collection: string
+        ) =>
+          withClient(
+            (client) => client.removeCollection(_class, space, objectId, attachedTo, attachedToClass, collection),
+            "removeCollection failed"
           ),
 
         createMixin: <D extends Doc, M extends D>(
@@ -508,10 +552,12 @@ export class HulyClient extends Context.Tag("@hulymcp/HulyClient")<
       workbenchUrlConfig: testWorkbenchUrlConfig,
       findAll: noopFindAll,
       findOne: noopFindOne,
+      findAllInModel: noopFindAll,
       createDoc: notImplemented("createDoc"),
       updateDoc: notImplemented("updateDoc"),
       addCollection: notImplemented("addCollection"),
       removeDoc: notImplemented("removeDoc"),
+      removeCollection: notImplemented("removeCollection"),
       uploadMarkup: notImplemented("uploadMarkup"),
       fetchMarkup: noopFetchMarkup,
       createMixin: notImplemented("createMixin"),

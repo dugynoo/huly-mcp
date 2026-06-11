@@ -88,12 +88,27 @@ export const findProjectWithStatuses = (
       if (statusRefs.length > 0) {
         // Try to query Status documents for names
         // On some workspaces this fails with deserialization errors
-        const statusDocsResult = yield* Effect.either(
+        let statusDocsResult = yield* Effect.either(
           client.findAll<Status>(
             core.class.Status,
             { _id: { $in: statusRefs } }
           )
         )
+
+        // Statuses of project types are model-space documents; on workspaces
+        // where the remote query fails (malformed model txes), the local model
+        // still has them with resolved names.
+        if (statusDocsResult._tag === "Left" || statusDocsResult.right.length === 0) {
+          const modelResult = yield* Effect.either(
+            client.findAllInModel<Status>(
+              core.class.Status,
+              { _id: { $in: statusRefs } }
+            )
+          )
+          if (modelResult._tag === "Right" && modelResult.right.length > 0) {
+            statusDocsResult = modelResult
+          }
+        }
 
         if (statusDocsResult._tag === "Right") {
           for (const doc of statusDocsResult.right) {
@@ -301,9 +316,19 @@ export const resolveTaskTypeForProject = (
 
     const statuses: Array<StatusInfo> = []
     if (statusRefs.length > 0) {
-      const statusDocsResult = yield* Effect.either(
+      let statusDocsResult = yield* Effect.either(
         client.findAll<Status>(core.class.Status, { _id: { $in: [...statusRefs] } })
       )
+
+      // Same model-space fallback as findProjectWithStatuses.
+      if (statusDocsResult._tag === "Left" || statusDocsResult.right.length === 0) {
+        const modelResult = yield* Effect.either(
+          client.findAllInModel<Status>(core.class.Status, { _id: { $in: [...statusRefs] } })
+        )
+        if (modelResult._tag === "Right" && modelResult.right.length > 0) {
+          statusDocsResult = modelResult
+        }
+      }
 
       if (statusDocsResult._tag === "Right") {
         for (const doc of statusDocsResult.right) {
