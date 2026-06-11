@@ -1,5 +1,19 @@
 # @dugynoo/huly-mcp
 
+## 0.15.0
+
+### Minor Changes
+
+- Add `dedup_planner_todos` tool that removes duplicate Planner ToDos the Huly server occasionally creates per issue. Groups ToDos by issue + owner, keeps one per group (preferring scheduled, then not-done, then oldest) and removes the rest. Dry-run by default; pass `apply: true` to delete. Also adds the `removeCollection` client operation used by the tool.
+
+### Patch Changes
+
+- Resolve status names from the local client model when the remote `core.class.Status` query fails.
+
+  **Problem**: On workspaces with malformed model transactions, `list_statuses`, `get_project`, `list_issues` and `get_issue` returned raw status ids (e.g. `6a156d99dc6d0a547e9ad569`) instead of status names for custom project types, and the name-based `isDone`/`isCanceled` heuristic failed for non-English status names.
+
+  **Fix**: New `findAllInModel` client operation backed by `ModelDb.findAllSync`. `findProjectWithStatuses` and `resolveTaskTypeForProject` now fall back to the local model (where project type statuses are already loaded with names and categories) before the ref-derived name heuristic.
+
 ## 0.14.0
 
 ### Minor Changes
