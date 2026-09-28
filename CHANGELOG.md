@@ -1,5 +1,11 @@
 # @dugynoo/huly-mcp
 
+## 0.16.0
+
+### Minor Changes
+
+- 3aa237b: `list_comments` now includes thread replies. Each comment that has replies carries a `replies` array (oldest first) with `id`, `body`, `authorId` and timestamps. Previously replies under issue comments were not readable at all, because `list_thread_replies` only works for channel messages.
+
 ## 0.15.0
 
 ### Minor Changes
