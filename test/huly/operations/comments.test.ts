@@ -98,6 +98,7 @@ interface MockConfig {
   projects?: Array<HulyProject>
   issues?: Array<HulyIssue>
   messages?: Array<ChatMessage>
+  threadReplies?: Array<ChatMessage>
   captureMessageQuery?: { query?: Record<string, unknown>; options?: Record<string, unknown> }
   captureAddCollection?: { attributes?: Record<string, unknown>; id?: string }
   captureUpdateDoc?: { operations?: Record<string, unknown> }
@@ -128,6 +129,11 @@ const createTestLayerWithMocks = (config: MockConfig) => {
         filtered = filtered.sort((a, b) => direction * ((a.createdOn ?? 0) - (b.createdOn ?? 0)))
       }
       return Effect.succeed(toFindResult(filtered))
+    }
+    if (_class === chunter.class.ThreadMessage) {
+      const parents = (query as { attachedTo: { $in: Array<string> } }).attachedTo.$in
+      const replies = (config.threadReplies ?? []).filter(r => parents.includes(r.attachedTo))
+      return Effect.succeed(toFindResult(replies))
     }
     return Effect.succeed(toFindResult([]))
   }) as HulyClientOperations["findAll"]
@@ -262,6 +268,52 @@ describe("listComments", () => {
         }).pipe(Effect.provide(testLayer))
 
         expect(result).toHaveLength(0)
+      }))
+
+    it.effect("nests thread replies under their parent comment", () =>
+      Effect.gen(function*() {
+        const project = makeProject({ identifier: "TEST" })
+        const issue = makeIssue({ identifier: "TEST-1", number: 1 })
+        const messages = [
+          makeChatMessage({
+            _id: "msg-1" as Ref<ChatMessage>,
+            message: "Needs a spec",
+            attachedTo: "issue-1" as Ref<Doc>,
+            replies: 1
+          }),
+          makeChatMessage({
+            _id: "msg-2" as Ref<ChatMessage>,
+            message: "No replies here",
+            attachedTo: "issue-1" as Ref<Doc>
+          })
+        ]
+        const threadReplies = [
+          makeChatMessage({
+            _id: "reply-1" as Ref<ChatMessage>,
+            message: "Here is the spec",
+            attachedTo: "msg-1" as Ref<Doc>,
+            modifiedBy: "person-9" as PersonId,
+            createdOn: 5000
+          })
+        ]
+
+        const testLayer = createTestLayerWithMocks({
+          projects: [project],
+          issues: [issue],
+          messages,
+          threadReplies
+        })
+
+        const result = yield* listComments({
+          project: projectIdentifier("TEST"),
+          issueIdentifier: issueIdentifier("TEST-1")
+        }).pipe(Effect.provide(testLayer))
+
+        const withReplies = result.find(c => c.id === "msg-1")
+        expect(withReplies?.replies).toHaveLength(1)
+        expect(withReplies?.replies?.[0].body).toBe("Here is the spec")
+        expect(withReplies?.replies?.[0].authorId).toBe("person-9")
+        expect(result.find(c => c.id === "msg-2")?.replies).toBeUndefined()
       }))
 
     it.effect("transforms message to comment format", () =>

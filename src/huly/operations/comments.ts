@@ -1,4 +1,5 @@
-import type { ChatMessage } from "@hcengineering/chunter"
+import type { ActivityMessage } from "@hcengineering/activity"
+import type { ChatMessage, ThreadMessage } from "@hcengineering/chunter"
 import { type AttachedData, type DocumentUpdate, generateId, type Ref, SortingOrder } from "@hcengineering/core"
 import { Clock, Effect, Schema } from "effect"
 
@@ -77,6 +78,33 @@ const findComment = (params: { project: string; issueIdentifier: string; comment
     return { client, issue, project, comment }
   })
 
+/**
+ * Fetch thread replies for comments that have any, grouped by parent comment.
+ * Replies are chunter ThreadMessage docs attached to the comment, not the issue.
+ */
+const findThreadReplies = (
+  client: HulyClient["Type"],
+  comments: ReadonlyArray<ChatMessage>
+): Effect.Effect<Map<string, ReadonlyArray<ThreadMessage>>, HulyClientError> =>
+  Effect.gen(function*() {
+    const parentIds: Array<Ref<ActivityMessage>> = comments
+      .filter((c) => (c.replies ?? 0) > 0)
+      .map((c) => c._id)
+    if (parentIds.length === 0) return new Map()
+
+    const replies = yield* client.findAll<ThreadMessage>(
+      chunter.class.ThreadMessage,
+      { attachedTo: { $in: parentIds } },
+      { sort: { createdOn: SortingOrder.Ascending } }
+    )
+
+    return new Map(
+      parentIds
+        .map((id) => [id, replies.filter((reply) => reply.attachedTo === id)] as const)
+        .filter(([, thread]) => thread.length > 0)
+    )
+  })
+
 // --- Operations ---
 
 /**
@@ -109,16 +137,31 @@ export const listComments = (
       }
     )
 
+    const repliesByComment = yield* findThreadReplies(client, messages)
+
     // Spread: Schema.decodeUnknown returns readonly array; return type requires mutable
     const validated = yield* Schema.decodeUnknown(Schema.Array(CommentSchema))(
-      messages.map((msg) => ({
-        id: msg._id,
-        body: optionalMarkupToMarkdown(msg.message, markupUrlConfig, ""),
-        authorId: msg.modifiedBy,
-        createdOn: msg.createdOn,
-        modifiedOn: msg.modifiedOn,
-        editedOn: msg.editedOn
-      }))
+      messages.map((msg) => {
+        const replies = repliesByComment.get(msg._id)
+        return {
+          id: msg._id,
+          body: optionalMarkupToMarkdown(msg.message, markupUrlConfig, ""),
+          authorId: msg.modifiedBy,
+          createdOn: msg.createdOn,
+          modifiedOn: msg.modifiedOn,
+          editedOn: msg.editedOn,
+          ...(replies === undefined ? {} : {
+            replies: replies.map((reply) => ({
+              id: reply._id,
+              body: optionalMarkupToMarkdown(reply.message, markupUrlConfig, ""),
+              authorId: reply.modifiedBy,
+              createdOn: reply.createdOn,
+              modifiedOn: reply.modifiedOn,
+              editedOn: reply.editedOn
+            }))
+          })
+        }
+      })
     ).pipe(
       Effect.mapError((parseError) =>
         new HulyConnectionError({

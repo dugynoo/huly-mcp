@@ -16,7 +16,8 @@ const CATEGORY = "comments" as const
 export const commentTools: ReadonlyArray<RegisteredTool> = [
   {
     name: "list_comments",
-    description: "List comments on a Huly issue. Returns comments sorted by creation date (oldest first).",
+    description:
+      "List comments on a Huly issue. Returns comments sorted by creation date (oldest first). Comments with thread replies include them in a `replies` array (oldest first).",
     category: CATEGORY,
     inputSchema: listCommentsParamsJsonSchema,
     handler: createToolHandler(
