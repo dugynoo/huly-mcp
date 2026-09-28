@@ -2,6 +2,18 @@ import { JSONSchema, Schema } from "effect"
 
 import { CommentId, IssueIdentifier, LimitParam, NonEmptyString, ProjectIdentifier, Timestamp } from "./shared.js"
 
+const CommentReplySchema = Schema.Struct({
+  id: NonEmptyString,
+  body: Schema.String,
+  authorId: Schema.optional(NonEmptyString),
+  createdOn: Schema.optional(Timestamp),
+  modifiedOn: Schema.optional(Timestamp),
+  editedOn: Schema.optional(Schema.NullOr(Timestamp))
+}).annotations({
+  title: "CommentReply",
+  description: "Thread reply under an issue comment"
+})
+
 export const CommentSchema = Schema.Struct({
   id: CommentId,
   body: NonEmptyString,
@@ -9,7 +21,8 @@ export const CommentSchema = Schema.Struct({
   authorId: Schema.optional(NonEmptyString),
   createdOn: Schema.optional(Timestamp),
   modifiedOn: Schema.optional(Timestamp),
-  editedOn: Schema.optional(Schema.NullOr(Timestamp))
+  editedOn: Schema.optional(Schema.NullOr(Timestamp)),
+  replies: Schema.optional(Schema.Array(CommentReplySchema))
 }).annotations({
   title: "Comment",
   description: "Issue comment"

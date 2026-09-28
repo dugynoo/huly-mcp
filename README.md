@@ -226,7 +226,7 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 
 | Tool | Description |
 |------|-------------|
-| `list_comments` | List comments on a Huly issue. Returns comments sorted by creation date (oldest first). |
+| `list_comments` | List comments on a Huly issue. Returns comments sorted by creation date (oldest first). Comments with thread replies include them in a `replies` array (oldest first). |
 | `add_comment` | Add a comment to a Huly issue. Comment body supports markdown formatting. |
 | `update_comment` | Update an existing comment on a Huly issue. Comment body supports markdown formatting. |
 | `delete_comment` | Delete a comment from a Huly issue. This action cannot be undone. |
