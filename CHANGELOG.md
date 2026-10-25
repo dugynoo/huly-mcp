@@ -1,5 +1,15 @@
 # @dugynoo/huly-mcp
 
+## 0.17.0
+
+### Minor Changes
+
+- c620f2f: Add `create_lead` and `update_lead` tools. `create_lead` creates a lead in a funnel for a customer organization (found by name, otherwise created with the Customer mixin), with optional markdown description, status and assignee. `update_lead` changes status, title, description or assignee of an existing `LEAD-N`.
+
+### Patch Changes
+
+- 8613a84: Fix file uploads overwriting each other: blobs were stored under the original filename, so two attachments named e.g. `email.txt` shared one blob and the later upload replaced the earlier one everywhere. Uploads now use a unique object name (UUID + extension); the attachment keeps the original filename for display.
+
 ## 0.16.0
 
 ### Minor Changes
