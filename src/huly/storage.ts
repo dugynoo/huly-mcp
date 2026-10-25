@@ -5,6 +5,7 @@
  *
  * @module
  */
+import { randomUUID } from "node:crypto"
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
 
@@ -182,7 +183,11 @@ export class HulyStorageClient extends Context.Tag("@hulymcp/HulyStorageClient")
         uploadFile: (filename, data, contentType) =>
           Effect.tryPromise({
             try: async () => {
-              const blob = await storageClient.put(filename, data, contentType, data.length)
+              // Object name must be unique per upload (as the Huly UI does); using the filename
+              // would make every "email.txt" share one blob and overwrite earlier attachments.
+              // The display name lives on the attachment doc, not in the blob id.
+              const objectName = `${randomUUID()}${path.extname(filename)}`
+              const blob = await storageClient.put(objectName, data, contentType, data.length)
               return {
                 blobId: blob._id,
                 contentType: blob.contentType,

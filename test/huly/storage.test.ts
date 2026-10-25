@@ -739,6 +739,32 @@ describe("HulyStorageClient.layer (real layer with mocked api-client)", () => {
       ])
     }))
 
+  it.effect("uploads same filename under distinct object names so blobs never overwrite each other", () =>
+    Effect.gen(function*() {
+      setupMocksForSuccess()
+      mockPut.mockImplementation((objectName: string) =>
+        Promise.resolve({
+          _id: objectName as Ref<Blob>,
+          contentType: "text/plain",
+          size: 5
+        })
+      )
+
+      const layer = Layer.fresh(HulyStorageClient.layerWithDependencies).pipe(
+        Layer.provide(Layer.merge(configLayer, testSdkLayer))
+      )
+      const client = yield* HulyStorageClient.pipe(Effect.provide(layer))
+
+      const first = yield* client.uploadFile("email.txt", Buffer.from("lead1"), "text/plain")
+      const second = yield* client.uploadFile("email.txt", Buffer.from("lead2"), "text/plain")
+
+      const objectNames = mockPut.mock.calls.map((call) => call[0])
+      expect(objectNames).toHaveLength(2)
+      expect(objectNames[0]).not.toBe("email.txt")
+      expect(objectNames[0]).not.toBe(objectNames[1])
+      expect(first.blobId).not.toBe(second.blobId)
+    }))
+
   // test-revizorro: approved
   it.effect("getFileUrl constructs correct URL without calling API", () =>
     Effect.gen(function*() {
