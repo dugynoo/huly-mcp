@@ -4,7 +4,7 @@
  * @module
  */
 import { AvatarType, type Organization as HulyOrganization, type Person } from "@hcengineering/contact"
-import type { AttachedDoc, Data, DocumentUpdate, MarkupBlobRef, Ref, Space, Status } from "@hcengineering/core"
+import type { AttachedDoc, Data, DocumentUpdate, MarkupBlobRef, Ref, Sequence, Status } from "@hcengineering/core"
 import { generateId, SortingOrder } from "@hcengineering/core"
 import { makeRank } from "@hcengineering/rank"
 import { Effect, Schema } from "effect"
@@ -20,18 +20,11 @@ import { normalizeForComparison } from "../../utils/normalize.js"
 import { HulyClient, type HulyClientError } from "../client.js"
 import type { FunnelNotFoundError } from "../errors-leads.js"
 import { LeadNotFoundError } from "../errors-leads.js"
-import type { HulyConnectionError, InvalidStatusError, PersonNotFoundError } from "../errors.js"
-import { contact } from "../huly-plugins.js"
+import { HulyConnectionError, type InvalidStatusError, type PersonNotFoundError } from "../errors.js"
+import { contact, core } from "../huly-plugins.js"
 import { leadClassIds } from "../lead-plugin.js"
 import { extractUpdatedSequence, resolveAssignee } from "./issues-write.js"
-import {
-  findFunnel,
-  funnelAsSpace,
-  getFunnelStatuses,
-  type HulyFunnel,
-  type HulyLead,
-  resolveStatusByName
-} from "./leads.js"
+import { findFunnel, funnelAsSpace, getFunnelStatuses, type HulyLead, resolveStatusByName } from "./leads.js"
 import { toRef } from "./sdk-boundary.js"
 
 const toLeadIdentifier = Schema.decodeSync(LeadIdentifier)
@@ -44,6 +37,7 @@ interface HulyLeadData {
   assignee: Ref<Person> | null
   description: MarkupBlobRef | null
   kind: string
+  startDate: number | null
   rank: string
   dueDate: number | null
   isDone: boolean
@@ -69,10 +63,10 @@ const findOrCreateCustomerOrganization = (
       if (!isCustomer) {
         yield* client.createMixin(
           existing._id,
-          contact.class.Organization,
-          contact.space.Contacts,
+          existing._class,
+          existing.space,
           leadClassIds.mixin.Customer,
-          {}
+          CUSTOMER_MIXIN_DATA
         )
       }
       return existing._id
@@ -92,22 +86,42 @@ const findOrCreateCustomerOrganization = (
       contact.class.Organization,
       contact.space.Contacts,
       leadClassIds.mixin.Customer,
-      {}
+      CUSTOMER_MIXIN_DATA
     )
     return orgId
   })
 
-const nextLeadNumberFallback = (
-  client: HulyClient["Type"],
-  funnel: HulyFunnel
-): Effect.Effect<number, HulyClientError> =>
+// Upstream Customer mixin attribute; the lead plugin types are not published.
+// eslint-disable-next-line no-restricted-syntax, @typescript-eslint/consistent-type-assertions -- SDK boundary: mixin attributes of the unpublished lead plugin
+const CUSTOMER_MIXIN_DATA = { customerDescription: null } as never
+
+// Lead numbers come from one workspace-wide Sequence doc attached to the Lead class
+// (upstream CreateLead.svelte, created by the lead migration).
+const nextLeadNumber = (
+  client: HulyClient["Type"]
+): Effect.Effect<number, HulyClientError | HulyConnectionError> =>
   Effect.gen(function*() {
-    const last = yield* client.findOne<HulyLead>(
-      leadClassIds.class.Lead,
-      { space: funnelAsSpace(funnel) },
-      { sort: { number: SortingOrder.Descending } }
+    const sequence = yield* client.findOne<Sequence>(
+      core.class.Sequence,
+      { attachedTo: leadClassIds.class.Lead }
     )
-    return (last?.number ?? 0) + 1
+    if (sequence === undefined) {
+      return yield* new HulyConnectionError({
+        message: "Lead sequence document (core:class:Sequence for lead:class:Lead) not found in the workspace"
+      })
+    }
+    const incResult = yield* client.updateDoc(
+      core.class.Sequence,
+      core.space.Model,
+      sequence._id,
+      { $inc: { sequence: 1 } },
+      true
+    )
+    const updated = extractUpdatedSequence(incResult)
+    if (updated === undefined) {
+      return yield* new HulyConnectionError({ message: "Lead sequence increment returned no updated value" })
+    }
+    return updated
   })
 
 type CreateLeadError =
@@ -133,6 +147,8 @@ export const createLead = (
     const statusRef = params.status !== undefined
       ? yield* resolveStatusByName(statuses, params.status, params.funnel)
       : statuses[0]._id
+    // Task type (kind) follows the funnel ProjectType: the one bound to the chosen status.
+    const kind = statuses.find((status) => status._id === statusRef)?.taskType ?? leadClassIds.taskType.Lead
 
     const assigneeRef: Ref<Person> | null = params.assignee !== undefined
       ? (yield* resolveAssignee(client, params.assignee))._id
@@ -140,15 +156,7 @@ export const createLead = (
 
     const customerId = yield* findOrCreateCustomerOrganization(client, params.customer)
 
-    const incResult = yield* client.updateDoc(
-      leadClassIds.class.Funnel,
-      toRef<Space>("core:space:Space"),
-      funnel._id,
-      // eslint-disable-next-line no-restricted-syntax -- SDK boundary: Funnel `sequence` is not in the mirrored HulyFunnel type
-      { $inc: { sequence: 1 } } as DocumentUpdate<HulyFunnel>,
-      true
-    )
-    const number = extractUpdatedSequence(incResult) ?? (yield* nextLeadNumberFallback(client, funnel))
+    const number = yield* nextLeadNumber(client)
 
     const leadId = generateId<HulyLead>()
 
@@ -178,7 +186,8 @@ export const createLead = (
       status: statusRef,
       assignee: assigneeRef,
       description: descriptionMarkupRef,
-      kind: leadClassIds.taskType.Lead,
+      kind,
+      startDate: null,
       rank,
       dueDate: null,
       isDone: false,

@@ -43,7 +43,7 @@ import { findPersonByEmailOrName } from "./contacts-shared.js"
 import { clampLimit, escapeLikeWildcards } from "./query-helpers.js"
 import { toRef } from "./sdk-boundary.js"
 
-export interface HulyFunnel extends Doc {
+interface HulyFunnel extends Doc {
   name: string
   description?: string
   archived: boolean
@@ -66,6 +66,7 @@ export interface HulyLead extends Doc {
 type StatusInfo = {
   _id: Ref<Status>
   name: string
+  taskType?: Ref<Doc> | undefined
 }
 
 type HulyCustomer = Contact | HulyOrganization
@@ -133,7 +134,9 @@ export const getFunnelStatuses = (
       )
     }
 
-    const projectType = yield* client.findOne<Doc & { statuses?: ReadonlyArray<{ _id: Ref<Status> }> }>(
+    const projectType = yield* client.findOne<
+      Doc & { statuses?: ReadonlyArray<{ _id: Ref<Status>; taskType?: Ref<Doc> }> }
+    >(
       task.class.ProjectType,
       { _id: toRef<Doc>(funnel.type) }
     )
@@ -162,7 +165,8 @@ export const getFunnelStatuses = (
 
     return statusDocs.map((doc) => ({
       _id: doc._id,
-      name: doc.name
+      name: doc.name,
+      taskType: projectType.statuses?.find((status) => status._id === doc._id)?.taskType
     }))
   })
 

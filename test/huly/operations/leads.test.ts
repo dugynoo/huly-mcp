@@ -131,7 +131,7 @@ const makeOrganization = (id: string, name: string): HulyOrganization => {
   return organization
 }
 
-const makeProjectType = (statusIds: ReadonlyArray<string>) => ({
+const makeProjectType = (statusIds: ReadonlyArray<string>, taskType?: string) => ({
   _id: docRef<Doc>("project-type-1"),
   _class: task.class.ProjectType,
   space: spaceRef("space"),
@@ -139,7 +139,7 @@ const makeProjectType = (statusIds: ReadonlyArray<string>) => ({
   modifiedOn: 0,
   createdBy: corePersonId("user"),
   createdOn: 0,
-  statuses: statusIds.map((id) => ({ _id: statusRef(id) }))
+  statuses: statusIds.map((id) => ({ _id: statusRef(id), ...(taskType !== undefined ? { taskType } : {}) }))
 })
 
 interface LeadMockConfig {
@@ -151,6 +151,7 @@ interface LeadMockConfig {
   persons?: ReadonlyArray<Person>
   projectType?: ReturnType<typeof makeProjectType>
   statusQueryError?: HulyConnectionError
+  noSequence?: boolean
   statuses?: ReadonlyArray<MockStatus>
 }
 
@@ -233,6 +234,14 @@ const createTestLayer = (config: LeadMockConfig, extra: Partial<HulyClientOperat
 
     if (_class === task.class.ProjectType) {
       return Effect.succeed(projectType)
+    }
+
+    if (_class === core.class.Sequence) {
+      return Effect.succeed(
+        config.noSequence === true || q.attachedTo !== leadClassIds.class.Lead
+          ? undefined
+          : { _id: "lead-sequence", _class: core.class.Sequence, attachedTo: leadClassIds.class.Lead, sequence: 6 }
+      )
     }
 
     if (_class === leadClassIds.class.Lead) {
@@ -555,7 +564,7 @@ describe("Lead Operations", () => {
       createDoc: Array<{ _class: unknown; attributes: Record<string, unknown>; id: unknown }>
       createMixin: Array<{ objectId: unknown; mixin: unknown }>
       addCollection: Array<{ attachedTo: unknown; attributes: Record<string, unknown>; id: unknown }>
-      updateDoc: Array<{ operations: Record<string, unknown> }>
+      updateDoc: Array<{ _class: unknown; space: unknown; objectId: unknown; operations: Record<string, unknown> }>
       uploadMarkup: Array<{ markup: string }>
     }
 
@@ -582,8 +591,8 @@ describe("Lead Operations", () => {
           calls.addCollection.push({ attachedTo, attributes, id })
           return Effect.succeed(id)
         }) as HulyClientOperations["addCollection"],
-        updateDoc: ((_class: unknown, _space: unknown, _objectId: unknown, operations: Record<string, unknown>) => {
-          calls.updateDoc.push({ operations })
+        updateDoc: ((_class: unknown, space: unknown, objectId: unknown, operations: Record<string, unknown>) => {
+          calls.updateDoc.push({ _class, space, objectId, operations })
           return Effect.succeed("$inc" in operations ? { object: { sequence: 7 } } : {})
         }) as HulyClientOperations["updateDoc"],
         // eslint-disable-next-line no-restricted-syntax -- test mock returns a plain string where the SDK type is a branded MarkupRef
@@ -610,6 +619,12 @@ describe("Lead Operations", () => {
         } as never).pipe(Effect.provide(testLayer))
 
         expect(result.identifier).toBe("LEAD-7")
+        expect(calls.updateDoc).toHaveLength(1)
+        expect(calls.updateDoc[0]._class).toBe(core.class.Sequence)
+        expect(calls.updateDoc[0].space).toBe(core.space.Model)
+        expect(calls.updateDoc[0].objectId).toBe("lead-sequence")
+        expect(calls.updateDoc[0].operations).toEqual({ $inc: { sequence: 1 } })
+        expect(calls.addCollection[0].attributes.startDate).toBeNull()
         expect(result.funnelId).toBe("funnel-1")
         expect(calls.createDoc).toHaveLength(1)
         expect(calls.createDoc[0].attributes.name).toBe("Kavarna Test s.r.o.")
@@ -671,6 +686,53 @@ describe("Lead Operations", () => {
         )
 
         expect(error._tag).toBe("FunnelNotFoundError")
+      }))
+
+    it.effect("fails with a clear error when the lead Sequence doc is missing", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ noSequence: true }, ops)
+
+        const error = yield* Effect.flip(
+          createLead({ funnel: funnelReference("funnel-1"), title: "Deal", customer: "Acme" } as never).pipe(
+            Effect.provide(testLayer)
+          )
+        )
+
+        expect(error.message).toContain("sequence")
+        expect(calls.addCollection).toHaveLength(0)
+      }))
+
+    it.effect("takes kind from the funnel ProjectType task type", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ projectType: makeProjectType(["status-1"], "custom:taskType:Lead") }, ops)
+
+        yield* createLead({ funnel: funnelReference("funnel-1"), title: "Deal", customer: "Acme" } as never).pipe(
+          Effect.provide(testLayer)
+        )
+
+        expect(calls.addCollection[0].attributes.kind).toBe("custom:taskType:Lead")
+      }))
+
+    it.effect("resolves a status with en-dash and diacritics exactly as typed (create and update)", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const statuses = [makeStatus("status-1", "Nový"), makeStatus("status-3", "Odpověděl – zájem")]
+        const testLayer = createTestLayer({ statuses, leads: [makeLead()] }, ops)
+
+        yield* createLead({
+          funnel: funnelReference("funnel-1"),
+          title: "Deal",
+          customer: "Acme",
+          status: statusName("Odpověděl – zájem")
+        } as never).pipe(Effect.provide(testLayer))
+        yield* updateLead({ lead: leadIdentifier("LEAD-1"), status: statusName("Odpověděl – zájem") } as never).pipe(
+          Effect.provide(testLayer)
+        )
+
+        expect(calls.addCollection[0].attributes.status).toBe("status-3")
+        expect(calls.updateDoc.at(-1)?.operations.status).toBe("status-3")
       }))
 
     it.effect("updateLead changes the status by name", () =>
