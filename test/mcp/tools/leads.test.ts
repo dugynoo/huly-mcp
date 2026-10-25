@@ -34,9 +34,22 @@ describe("Lead MCP Tools", () => {
       expect(typeof tool?.handler).toBe("function")
     }))
 
-  it.effect("has exactly 3 tools", () =>
+  it.effect("registers create_lead with attachment guidance", () =>
     Effect.gen(function*() {
-      expect(leadTools).toHaveLength(3)
+      const tool = leadTools.find(t => t.name === "create_lead")
+      expect(tool).toBeDefined()
+      expect(tool?.description).toContain("add_attachment")
+      expect(tool?.description).toContain("lead:class:Lead")
+    }))
+
+  it.effect("registers update_lead tool", () =>
+    Effect.gen(function*() {
+      expect(leadTools.find(t => t.name === "update_lead")).toBeDefined()
+    }))
+
+  it.effect("has exactly 5 tools", () =>
+    Effect.gen(function*() {
+      expect(leadTools).toHaveLength(5)
     }))
 
   it.effect("all tools have unique names", () =>

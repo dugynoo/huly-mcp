@@ -1,6 +1,6 @@
 import { JSONSchema, ParseResult, Schema } from "effect"
 
-import { LimitParam, PersonName, PersonRefInput, StatusName, Timestamp } from "./shared.js"
+import { LimitParam, NonEmptyString, PersonName, PersonRefInput, StatusName, Timestamp } from "./shared.js"
 
 // --- Lead IDs ---
 // Upstream Huly reference:
@@ -150,12 +150,69 @@ export const GetLeadParamsSchema = Schema.Struct({
 
 export type GetLeadParams = Schema.Schema.Type<typeof GetLeadParamsSchema>
 
+export const CreateLeadParamsSchema = Schema.Struct({
+  funnel: FunnelReference.annotations({
+    description: "Funnel ID returned by list_funnels, or funnel name for convenience lookup."
+  }),
+  title: NonEmptyString.annotations({
+    description: "Lead title"
+  }),
+  customer: NonEmptyString.annotations({
+    description:
+      "Customer organization name. An existing organization with a matching name is reused; otherwise a new one is created with the Customer mixin."
+  }),
+  description: Schema.optional(Schema.String.annotations({
+    description: "Lead description (markdown supported)"
+  })),
+  status: Schema.optional(StatusName.annotations({
+    description: "Initial status name (uses the funnel's first status if not specified)"
+  })),
+  assignee: Schema.optional(PersonRefInput.annotations({
+    description: "Assignee email address or display name"
+  }))
+}).annotations({
+  title: "CreateLeadParams",
+  description: "Parameters for creating a lead in a funnel"
+})
+
+export type CreateLeadParams = Schema.Schema.Type<typeof CreateLeadParamsSchema>
+
+export const UpdateLeadParamsSchema = Schema.Struct({
+  lead: LeadIdentifier.annotations({
+    description: "Lead identifier (e.g., 'LEAD-1')"
+  }),
+  status: Schema.optional(StatusName.annotations({
+    description: "New status name"
+  })),
+  title: Schema.optional(NonEmptyString.annotations({
+    description: "New lead title"
+  })),
+  description: Schema.optional(Schema.String.annotations({
+    description: "New lead description (markdown supported)"
+  })),
+  assignee: Schema.optional(
+    Schema.NullOr(PersonRefInput).annotations({
+      description: "New assignee email or display name (null to unassign)"
+    })
+  )
+}).annotations({
+  title: "UpdateLeadParams",
+  description: "Parameters for updating a lead"
+})
+
+export type UpdateLeadParams = Schema.Schema.Type<typeof UpdateLeadParamsSchema>
+
 // --- JSON Schemas & Parsers ---
 
 export const listFunnelsParamsJsonSchema = JSONSchema.make(ListFunnelsParamsSchema)
 export const listLeadsParamsJsonSchema = JSONSchema.make(ListLeadsParamsSchema)
 export const getLeadParamsJsonSchema = JSONSchema.make(GetLeadParamsSchema)
 
+export const createLeadParamsJsonSchema = JSONSchema.make(CreateLeadParamsSchema)
+export const updateLeadParamsJsonSchema = JSONSchema.make(UpdateLeadParamsSchema)
+
+export const parseCreateLeadParams = Schema.decodeUnknown(CreateLeadParamsSchema)
+export const parseUpdateLeadParams = Schema.decodeUnknown(UpdateLeadParamsSchema)
 export const parseListFunnelsParams = Schema.decodeUnknown(ListFunnelsParamsSchema)
 export const parseListLeadsParams = Schema.decodeUnknown(ListLeadsParamsSchema)
 export const parseGetLeadParams = Schema.decodeUnknown(GetLeadParamsSchema)
@@ -167,4 +224,15 @@ export const parseLeadSummary = Schema.decodeUnknown(LeadSummarySchema)
 export interface ListFunnelsResult {
   readonly funnels: ReadonlyArray<FunnelSummary>
   readonly total: number
+}
+
+export interface CreateLeadResult {
+  readonly identifier: LeadIdentifier
+  readonly id: string
+  readonly funnelId: FunnelIdentifier
+}
+
+export interface UpdateLeadResult {
+  readonly identifier: LeadIdentifier
+  readonly updated: boolean
 }

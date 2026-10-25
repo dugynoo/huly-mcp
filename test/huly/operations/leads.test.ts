@@ -8,6 +8,7 @@ import { HulyClient, type HulyClientOperations } from "../../../src/huly/client.
 import { HulyConnectionError } from "../../../src/huly/errors.js"
 import { contact, core, task } from "../../../src/huly/huly-plugins.js"
 import { leadClassIds } from "../../../src/huly/lead-plugin.js"
+import { createLead, updateLead } from "../../../src/huly/operations/leads-write.js"
 import { getLead, listFunnels, listLeads } from "../../../src/huly/operations/leads.js"
 import { email, funnelReference, leadIdentifier, statusName } from "../../helpers/brands.js"
 import { contactRef, corePersonId, docRef, findResult, personRef, spaceRef, statusRef } from "../../helpers/huly-sdk.js"
@@ -172,7 +173,7 @@ const createLookupLead = (
   }
 })
 
-const createTestLayer = (config: LeadMockConfig) => {
+const createTestLayer = (config: LeadMockConfig, extra: Partial<HulyClientOperations> = {}) => {
   const contacts = config.contacts ?? []
   const funnels = config.funnels ?? [makeFunnel()]
   const leads = config.leads ?? []
@@ -214,6 +215,10 @@ const createTestLayer = (config: LeadMockConfig) => {
         : [...statuses]
 
       return Effect.succeed(findResult(filtered))
+    }
+
+    if (_class === contact.class.Organization) {
+      return Effect.succeed(findResult([...organizations]))
     }
 
     if (_class === contact.class.Channel) {
@@ -259,7 +264,8 @@ const createTestLayer = (config: LeadMockConfig) => {
   return HulyClient.testLayer({
     fetchMarkup: fetchMarkupImpl,
     findAll: findAllImpl,
-    findOne: findOneImpl
+    findOne: findOneImpl,
+    ...extra
   })
 }
 
@@ -541,6 +547,156 @@ describe("Lead Operations", () => {
           throw new Error(`Expected FunnelNotFoundError, got ${error._tag}`)
         }
         expect(error.identifier).toBe("missing-funnel")
+      }))
+  })
+
+  describe("createLead and updateLead", () => {
+    interface Calls {
+      createDoc: Array<{ _class: unknown; attributes: Record<string, unknown>; id: unknown }>
+      createMixin: Array<{ objectId: unknown; mixin: unknown }>
+      addCollection: Array<{ attachedTo: unknown; attributes: Record<string, unknown>; id: unknown }>
+      updateDoc: Array<{ operations: Record<string, unknown> }>
+      uploadMarkup: Array<{ markup: string }>
+    }
+
+    const makeWriteSpies = () => {
+      const calls: Calls = { createDoc: [], createMixin: [], addCollection: [], updateDoc: [], uploadMarkup: [] }
+      const ops: Partial<HulyClientOperations> = {
+        createDoc: ((_class: unknown, _space: unknown, attributes: Record<string, unknown>, id: unknown) => {
+          calls.createDoc.push({ _class, attributes, id })
+          return Effect.succeed(id)
+        }) as HulyClientOperations["createDoc"],
+        createMixin: ((objectId: unknown, _c: unknown, _s: unknown, mixin: unknown) => {
+          calls.createMixin.push({ objectId, mixin })
+          return Effect.succeed({})
+        }) as HulyClientOperations["createMixin"],
+        addCollection: ((
+          _class: unknown,
+          _space: unknown,
+          attachedTo: unknown,
+          _attachedToClass: unknown,
+          _collection: unknown,
+          attributes: Record<string, unknown>,
+          id: unknown
+        ) => {
+          calls.addCollection.push({ attachedTo, attributes, id })
+          return Effect.succeed(id)
+        }) as HulyClientOperations["addCollection"],
+        updateDoc: ((_class: unknown, _space: unknown, _objectId: unknown, operations: Record<string, unknown>) => {
+          calls.updateDoc.push({ operations })
+          return Effect.succeed("$inc" in operations ? { object: { sequence: 7 } } : {})
+        }) as HulyClientOperations["updateDoc"],
+        // eslint-disable-next-line no-restricted-syntax -- test mock returns a plain string where the SDK type is a branded MarkupRef
+        uploadMarkup: ((_class: unknown, _id: unknown, _attr: unknown, markup: string) => {
+          calls.uploadMarkup.push({ markup })
+          return Effect.succeed("markup-ref")
+        }) as unknown as HulyClientOperations["uploadMarkup"]
+      }
+      return { calls, ops }
+    }
+
+    const twoStatuses = [makeStatus("status-1", "Active"), makeStatus("status-2", "Won")]
+
+    it.effect("creates a missing customer organization with the Customer mixin and a lead attached to it", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ statuses: twoStatuses }, ops)
+
+        const result = yield* createLead({
+          funnel: funnelReference("Sales"),
+          title: "Kavarna Test",
+          customer: "Kavarna Test s.r.o.",
+          description: "# Audit"
+        } as never).pipe(Effect.provide(testLayer))
+
+        expect(result.identifier).toBe("LEAD-7")
+        expect(result.funnelId).toBe("funnel-1")
+        expect(calls.createDoc).toHaveLength(1)
+        expect(calls.createDoc[0].attributes.name).toBe("Kavarna Test s.r.o.")
+        expect(calls.createMixin).toHaveLength(1)
+        expect(calls.createMixin[0].mixin).toBe(leadClassIds.mixin.Customer)
+        expect(calls.addCollection).toHaveLength(1)
+        expect(calls.addCollection[0].attachedTo).toBe(calls.createDoc[0].id)
+        expect(calls.addCollection[0].attributes.identifier).toBe("LEAD-7")
+        expect(calls.addCollection[0].attributes.status).toBe("status-1")
+        expect(calls.addCollection[0].attributes.description).toBe("markup-ref")
+        expect(calls.uploadMarkup[0].markup).toBe("# Audit")
+        expect(result.id).toBe(calls.addCollection[0].id)
+      }))
+
+    it.effect("reuses an existing organization matched by normalized name", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const org = { ...makeOrganization("org-1", "Acme Corp"), [leadClassIds.mixin.Customer]: {} }
+        const testLayer = createTestLayer({ organizations: [org] }, ops)
+
+        yield* createLead({
+          funnel: funnelReference("funnel-1"),
+          title: "Deal",
+          customer: "  acme corp "
+        } as never).pipe(Effect.provide(testLayer))
+
+        expect(calls.createDoc).toHaveLength(0)
+        expect(calls.createMixin).toHaveLength(0)
+        expect(calls.addCollection[0].attachedTo).toBe("org-1")
+      }))
+
+    it.effect("fails with InvalidStatusError for an unknown status", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const testLayer = createTestLayer({}, ops)
+
+        const error = yield* Effect.flip(
+          createLead({
+            funnel: funnelReference("funnel-1"),
+            title: "Deal",
+            customer: "Acme",
+            status: statusName("Nope")
+          } as never).pipe(Effect.provide(testLayer))
+        )
+
+        expect(error._tag).toBe("InvalidStatusError")
+        expect(calls.addCollection).toHaveLength(0)
+      }))
+
+    it.effect("fails with FunnelNotFoundError for an unknown funnel", () =>
+      Effect.gen(function*() {
+        const { ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ funnels: [] }, ops)
+
+        const error = yield* Effect.flip(
+          createLead({ funnel: funnelReference("missing"), title: "Deal", customer: "Acme" } as never).pipe(
+            Effect.provide(testLayer)
+          )
+        )
+
+        expect(error._tag).toBe("FunnelNotFoundError")
+      }))
+
+    it.effect("updateLead changes the status by name", () =>
+      Effect.gen(function*() {
+        const { calls, ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ statuses: twoStatuses, leads: [makeLead()] }, ops)
+
+        const result = yield* updateLead({ lead: leadIdentifier("LEAD-1"), status: statusName("won") } as never).pipe(
+          Effect.provide(testLayer)
+        )
+
+        expect(result).toEqual({ identifier: "LEAD-1", updated: true })
+        expect(calls.updateDoc).toHaveLength(1)
+        expect(calls.updateDoc[0].operations.status).toBe("status-2")
+      }))
+
+    it.effect("updateLead fails with LeadNotFoundError for an unknown lead", () =>
+      Effect.gen(function*() {
+        const { ops } = makeWriteSpies()
+        const testLayer = createTestLayer({ leads: [] }, ops)
+
+        const error = yield* Effect.flip(
+          updateLead({ lead: leadIdentifier("LEAD-99"), title: "x" } as never).pipe(Effect.provide(testLayer))
+        )
+
+        expect(error._tag).toBe("LeadNotFoundError")
       }))
   })
 })

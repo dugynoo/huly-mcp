@@ -28,5 +28,9 @@ export const leadClassIds = {
   },
   mixin: {
     Customer: leadMixinRef<HulyOrganization>("lead:mixin:Customer")
+  },
+  taskType: {
+    // Default task type of the Lead class (kind of every lead).
+    Lead: "lead:taskType:Lead"
   }
 } as const

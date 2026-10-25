@@ -451,6 +451,8 @@ Original upstream copyright is preserved in [`LICENSE`](./LICENSE).
 | `list_funnels` | List all Huly sales funnels (lead pipelines). Returns each funnel's stable ID and display name, sorted by name. Supports filtering by archived status. |
 | `list_leads` | Query Huly leads in a funnel with optional filters. Pass the funnel ID returned by list_funnels, or a funnel name for convenience lookup. Returns leads sorted by modification date (newest first). Supports filtering by status, assignee, and title search. |
 | `get_lead` | Retrieve full details for a Huly lead including markdown description, customer name, funnel ID and funnel name, and status. Lead identifiers follow the upstream Huly format like 'LEAD-1'. |
+| `create_lead` | Create a lead in a Huly funnel. 'customer' is an organization name: an existing organization with a matching name is reused, otherwise a new one is created with the Customer mixin. Optional markdown description, initial status name and assignee. Returns the LEAD-N identifier, the lead id and the funnel id. To attach files, use add_attachment with objectClass 'lead:class:Lead', objectId set to the returned id and space set to the returned funnelId. |
+| `update_lead` | Update a Huly lead identified by LEAD-N. Updates only provided fields: status (by name), title, markdown description, assignee (email or name, null to unassign). |
 
 ### Processes
 

@@ -69,12 +69,12 @@ const TxIncResult = Schema.Struct({
   })
 })
 
-const extractUpdatedSequence = (txResult: unknown): number | undefined => {
+export const extractUpdatedSequence = (txResult: unknown): number | undefined => {
   const decoded = Schema.decodeUnknownOption(TxIncResult)(txResult)
   return decoded._tag === "Some" ? decoded.value.object.sequence : undefined
 }
 
-const resolveAssignee = (
+export const resolveAssignee = (
   client: HulyClient["Type"],
   assigneeIdentifier: string
 ): Effect.Effect<Person, PersonNotFoundError | HulyClientError> =>

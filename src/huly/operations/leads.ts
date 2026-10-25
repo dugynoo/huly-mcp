@@ -1,5 +1,5 @@
 /**
- * Lead operations: list funnels, list leads, get lead.
+ * Lead operations: list funnels, list leads, get lead (writes live in leads-write.ts).
  *
  * Upstream Huly references:
  * - https://github.com/hcengineering/platform/blob/b9657d53d130a2ed8034c1b71ab0cf8b7a0b4994/plugins/lead/src/index.ts#L71-L82
@@ -43,14 +43,14 @@ import { findPersonByEmailOrName } from "./contacts-shared.js"
 import { clampLimit, escapeLikeWildcards } from "./query-helpers.js"
 import { toRef } from "./sdk-boundary.js"
 
-interface HulyFunnel extends Doc {
+export interface HulyFunnel extends Doc {
   name: string
   description?: string
   archived: boolean
   type?: Ref<Doc>
 }
 
-interface HulyLead extends Doc {
+export interface HulyLead extends Doc {
   title: string
   identifier: string
   number: number
@@ -70,7 +70,7 @@ type StatusInfo = {
 
 type HulyCustomer = Contact | HulyOrganization
 
-const funnelAsSpace = (funnel: HulyFunnel): Ref<Space> => toRef<Space>(funnel._id)
+export const funnelAsSpace = (funnel: HulyFunnel): Ref<Space> => toRef<Space>(funnel._id)
 
 // Huly lead descriptions are stored as blob-backed markup refs. The client
 // fetch API accepts the wider MarkupRef shape, so this bridge is safe.
@@ -92,7 +92,7 @@ const compareFunnelsByRecency = (left: HulyFunnel, right: HulyFunnel): number =>
   return right.modifiedOn - left.modifiedOn
 }
 
-const findFunnel = (
+export const findFunnel = (
   client: HulyClient["Type"],
   funnelIdentifier: FunnelReference
 ): Effect.Effect<HulyFunnel, FunnelNotFoundError | HulyClientError> =>
@@ -120,7 +120,7 @@ const findFunnel = (
     return funnel
   })
 
-const getFunnelStatuses = (
+export const getFunnelStatuses = (
   client: HulyClient["Type"],
   funnel: HulyFunnel
 ): Effect.Effect<ReadonlyArray<StatusInfo>, HulyClientError | HulyConnectionError> =>
@@ -180,7 +180,7 @@ const resolveStatusName = (
     )
 }
 
-const resolveStatusByName = (
+export const resolveStatusByName = (
   statuses: ReadonlyArray<StatusInfo>,
   statusName: string,
   funnel: string
